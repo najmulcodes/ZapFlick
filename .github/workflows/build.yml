@@ -21,9 +21,7 @@ jobs:
       - name: Make wrapper executable
         run: chmod +x gradlew
 
-      - name: Unit tests
-        run: ./gradlew testDebugUnitTest
-
+      # The APK is built and published first, so failing tests never block installing the app.
       - name: Assemble debug APK
         run: ./gradlew assembleDebug
 
@@ -31,3 +29,15 @@ jobs:
         with:
           name: vidgrab-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+
+      # Still fails the run (red) when a test fails, so it cannot be ignored.
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-reports
+          path: |
+            app/build/reports/tests/testDebugUnitTest
+            app/build/test-results/testDebugUnitTest

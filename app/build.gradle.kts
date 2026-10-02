@@ -1,4 +1,5 @@
 import java.util.Properties
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -71,6 +72,14 @@ android {
 
     testOptions {
         unitTests.isReturnDefaultValues = true
+        unitTests.all {
+            // Print the real assertion message and stack in the log, not just "AssertionError at line N".
+            it.testLogging {
+                events("failed")
+                exceptionFormat = TestExceptionFormat.FULL
+                showStackTraces = true
+            }
+        }
     }
 }
 
