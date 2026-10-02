@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">VidGrab</string>
+    <string name="app_name">ZapFlick</string>
 
     <!-- Home -->
     <string name="url_label">Video link</string>
@@ -13,7 +13,7 @@
     <string name="action_downloads">Downloads</string>
     <string name="action_downloads_count">Downloads (%1$d)</string>
     <string name="empty_title">Nothing here yet</string>
-    <string name="empty_body">Paste a link above, or share one to VidGrab from any app.</string>
+    <string name="empty_body">Paste a link above, or share one to ZapFlick from any app.</string>
     <string name="fetching_info">Fetching video info…</string>
     <string name="thumbnail_description">Video thumbnail</string>
     <string name="added_to_queue">Added to the queue (%1$s)</string>

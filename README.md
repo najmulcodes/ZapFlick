@@ -1,4 +1,4 @@
-# VidGrab
+# ZapFlick
 
 Personal-use Android video downloader built on [yt-dlp](https://github.com/yt-dlp/yt-dlp) via
 [youtubedl-android](https://github.com/JunkFood02/youtubedl-android). Sideload only, not for the Play Store.
@@ -20,7 +20,7 @@ Working now:
 - One foreground-service notification for the whole queue ("Pause all" / "Cancel all"), and a
   notification when each download finishes or fails
 - Downloads interrupted by the app being killed are re-queued the next time the app opens
-- Finished files are published to `Movies/VidGrab` (video) or `Music/VidGrab` (audio) through MediaStore
+- Finished files are published to `Movies/ZapFlick` (video) or `Music/ZapFlick` (audio) through MediaStore
 
 Not yet (later phases): settings (concurrency, theme, location), playlists, in-app yt-dlp update.
 
@@ -48,7 +48,7 @@ The Gradle wrapper (8.11.1) is included. Then:
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-In Android Studio, open the `VidGrab` folder and let Gradle sync instead.
+In Android Studio, open the `ZapFlick` folder and let Gradle sync instead.
 On Windows, use `gradlew.bat` in place of `./gradlew`.
 
 The first launch unpacks the bundled Python and yt-dlp, which takes a few seconds. Fetching a link
@@ -57,7 +57,7 @@ before that finishes simply waits for it.
 ## Building without your own machine (GitHub Actions)
 
 `.github/workflows/build.yml` runs the unit tests and builds the debug APK on every push to `main`
-(and on demand from the Actions tab). Download `vidgrab-debug-apk` from the run's Artifacts and
+(and on demand from the Actions tab). Download `zapflick-debug-apk` from the run's Artifacts and
 install it with `adb install -r app-debug.apk`. Use this on low-power or thermally limited laptops.
 
 ## Signing a release build
@@ -65,15 +65,15 @@ install it with `adb install -r app-debug.apk`. Use this on low-power or thermal
 Create a keystore once (keep it and its passwords safe; you need the same key to update the app later):
 
 ```bash
-keytool -genkeypair -v -keystore vidgrab.jks -keyalg RSA -keysize 4096 -validity 10000 -alias vidgrab
+keytool -genkeypair -v -keystore zapflick.jks -keyalg RSA -keysize 4096 -validity 10000 -alias zapflick
 ```
 
 Create `keystore.properties` in the project root (it is git-ignored):
 
 ```properties
-storeFile=vidgrab.jks
+storeFile=zapflick.jks
 storePassword=your-store-password
-keyAlias=vidgrab
+keyAlias=zapflick
 keyPassword=your-key-password
 ```
 
@@ -102,7 +102,7 @@ Sites change often, and downloads break when yt-dlp falls behind.
 
 Files go through MediaStore, so the app needs no storage permission. On Android 8-9 (API 26-28),
 MediaStore writes need a legacy permission, so downloads there are saved to the app's own folder
-(`Android/data/com.najmulcodes.vidgrab/files/Movies`) instead.
+(`Android/data/com.najmulcodes.zapflick/files/Movies`) instead.
 
 ## How downloads work
 
@@ -119,7 +119,7 @@ on other failures, and after a successful save.
 ## Layout
 
 ```
-app/src/main/java/com/najmulcodes/vidgrab/
+app/src/main/java/com/najmulcodes/zapflick/
   domain/   models, use cases, the queue (DownloadQueueManager) and the interfaces it depends on
   data/     YoutubeDlEngine (the only file that touches the library), option, error and format
             parsing, Room database, MediaStore saver

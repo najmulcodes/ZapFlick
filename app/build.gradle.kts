@@ -16,11 +16,11 @@ val keystoreProps = Properties().apply {
 }
 
 android {
-    namespace = "com.najmulcodes.vidgrab"
+    namespace = "com.najmulcodes.zapflick"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.najmulcodes.vidgrab"
+        applicationId = "com.najmulcodes.zapflick"
         minSdk = 26
         targetSdk = 35
         versionCode = 2

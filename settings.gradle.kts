@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "VidGrab"
+rootProject.name = "ZapFlick"
 include(":app")
