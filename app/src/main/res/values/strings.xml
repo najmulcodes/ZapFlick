@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VidGrab</string>
+
+    <!-- Home -->
+    <string name="url_label">Video link</string>
+    <string name="action_paste">Paste</string>
+    <string name="action_fetch">Get info</string>
+    <string name="action_try_again">Try again</string>
+    <string name="action_new_link">Download another</string>
+    <string name="action_download">Download</string>
+    <string name="action_view_downloads">View downloads</string>
+    <string name="action_downloads">Downloads</string>
+    <string name="action_downloads_count">Downloads (%1$d)</string>
+    <string name="empty_title">Nothing here yet</string>
+    <string name="empty_body">Paste a link above, or share one to VidGrab from any app.</string>
+    <string name="fetching_info">Fetching video info…</string>
+    <string name="thumbnail_description">Video thumbnail</string>
+    <string name="added_to_queue">Added to the queue (%1$s)</string>
+
+    <!-- Quality sheet -->
+    <string name="quality_title">Choose quality</string>
+    <string name="quality_loading">Checking available qualities…</string>
+    <string name="quality_size_approx">About %1$s</string>
+    <string name="format_best">Best quality</string>
+    <string name="format_resolution">%1$dp</string>
+    <string name="format_audio_mp3">Audio only (MP3)</string>
+    <string name="format_audio_m4a">Audio only (M4A)</string>
+
+    <!-- Downloads screen -->
+    <string name="downloads_title">Downloads</string>
+    <string name="downloads_empty_title">No downloads yet</string>
+    <string name="downloads_empty_body">Videos you download show up here, with their progress.</string>
+    <string name="action_back">Back</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_resume">Resume</string>
+    <string name="action_open">Open</string>
+    <string name="action_remove">Remove</string>
+    <string name="action_pause_all">Pause all</string>
+    <string name="action_clear_finished">Clear finished</string>
+    <string name="status_queued">Waiting for a free slot…</string>
+    <string name="status_starting">Starting…</string>
+    <string name="status_paused">Paused</string>
+    <string name="status_saved">Saved to %1$s</string>
+    <string name="status_cancelled">Cancelled</string>
+    <string name="toast_cannot_open">No app found to open this file.</string>
+
+    <string name="progress_percent">%1$d%%</string>
+    <string name="progress_eta">ETA %1$s</string>
+
+    <string name="error_unavailable">This video is unavailable. It may be private or removed.</string>
+    <string name="error_geo_blocked">This video is not available in your region.</string>
+    <string name="error_network">Network problem. Check your connection and try again.</string>
+    <string name="error_format_not_found">The requested format is not available for this video.</string>
+    <string name="error_cancelled">The download was cancelled.</string>
+    <string name="error_invalid_url">That does not look like a valid link.</string>
+    <string name="error_storage">Could not save the file to your device storage.</string>
+    <string name="error_unknown">Something went wrong.</string>
+    <string name="error_unknown_detail">Something went wrong: %1$s</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_name">Downloads</string>
+    <string name="notification_channel_description">Progress of active downloads</string>
+    <string name="notification_waiting">Preparing download…</string>
+    <string name="notification_action_pause_all">Pause all</string>
+    <string name="notification_action_cancel_all">Cancel all</string>
+    <string name="notification_complete">Download complete</string>
+    <string name="notification_failed">Download failed</string>
+    <plurals name="notification_downloading">
+        <item quantity="one">Downloading %1$d video</item>
+        <item quantity="other">Downloading %1$d videos</item>
+    </plurals>
+</resources>
