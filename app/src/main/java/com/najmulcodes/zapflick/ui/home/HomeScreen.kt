@@ -28,6 +28,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.najmulcodes.zapflick.R
+import com.najmulcodes.zapflick.ui.components.BatteryOptimizationCard
 import com.najmulcodes.zapflick.ui.components.EmptyState
 import com.najmulcodes.zapflick.ui.components.ErrorCard
 import com.najmulcodes.zapflick.ui.components.FetchingCard
@@ -41,6 +42,7 @@ fun HomeScreen(
     incomingShare: String?,
     onShareConsumed: () -> Unit,
     onOpenDownloads: () -> Unit,
+    onOpenBrowser: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val urlInput by viewModel.urlInput.collectAsStateWithLifecycle()
@@ -63,6 +65,9 @@ fun HomeScreen(
             CenterAlignedTopAppBar(
                 title = { Text(stringResource(R.string.app_name)) },
                 actions = {
+                    TextButton(onClick = onOpenBrowser) {
+                        Text(stringResource(R.string.action_browser))
+                    }
                     TextButton(onClick = onOpenDownloads) {
                         Text(
                             if (activeDownloads > 0) {
@@ -84,6 +89,8 @@ fun HomeScreen(
                 .padding(horizontal = 20.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            BatteryOptimizationCard()
+
             UrlInputCard(
                 url = urlInput,
                 enabled = uiState != HomeUiState.Fetching,

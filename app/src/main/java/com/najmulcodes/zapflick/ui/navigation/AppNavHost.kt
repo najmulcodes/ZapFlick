@@ -6,12 +6,14 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.najmulcodes.zapflick.ui.browser.BrowserScreen
 import com.najmulcodes.zapflick.ui.downloads.DownloadsScreen
 import com.najmulcodes.zapflick.ui.home.HomeScreen
 
 object Routes {
     const val HOME = "home"
     const val DOWNLOADS = "downloads"
+    const val BROWSER = "browser"
 }
 
 @Composable
@@ -38,6 +40,13 @@ fun AppNavHost(
             HomeScreen(
                 incomingShare = incomingShare,
                 onShareConsumed = onShareConsumed,
+                onOpenDownloads = { navController.navigate(Routes.DOWNLOADS) { launchSingleTop = true } },
+                onOpenBrowser = { navController.navigate(Routes.BROWSER) { launchSingleTop = true } },
+            )
+        }
+        composable(Routes.BROWSER) {
+            BrowserScreen(
+                onBack = { navController.popBackStack() },
                 onOpenDownloads = { navController.navigate(Routes.DOWNLOADS) { launchSingleTop = true } },
             )
         }

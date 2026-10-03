@@ -1,6 +1,7 @@
 package com.najmulcodes.zapflick.data.ytdlp
 
 import android.content.Context
+import com.najmulcodes.zapflick.domain.browser.RequestSessions
 import com.najmulcodes.zapflick.domain.engine.DownloadEngine
 import com.najmulcodes.zapflick.domain.model.AvailableFormats
 import com.najmulcodes.zapflick.domain.model.DownloadError
@@ -34,6 +35,7 @@ import javax.inject.Singleton
 @Singleton
 class YoutubeDlEngine @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val sessions: RequestSessions,
 ) : DownloadEngine {
 
     private val initMutex = Mutex()
@@ -61,7 +63,10 @@ class YoutubeDlEngine @Inject constructor(
         withContext(Dispatchers.IO) {
             guarded {
                 initialize()
-                val request = YoutubeDLRequest(url).apply { addOption("--no-playlist") }
+                val request = YoutubeDLRequest(url).apply {
+                    addOption("--no-playlist")
+                    applySession(url)
+                }
                 val info = YoutubeDL.getInstance().getInfo(request)
                 val rawDuration: Int? = info.duration
                 VideoMetadata(
@@ -82,6 +87,7 @@ class YoutubeDlEngine @Inject constructor(
                     addOption("--dump-single-json")
                     addOption("--no-playlist")
                     addOption("--no-warnings")
+                    applySession(url)
                 }
                 val response = YoutubeDL.getInstance().execute(request, UUID.randomUUID().toString()) { _, _, _ -> }
                 FormatListParser.parse(response.out)
@@ -100,6 +106,7 @@ class YoutubeDlEngine @Inject constructor(
                 val value = option.value
                 if (value == null) addOption(option.name) else addOption(option.name, value)
             }
+            applySession(request.url)
         }
 
         coroutineScope {
@@ -129,6 +136,14 @@ class YoutubeDlEngine @Inject constructor(
             .filter { it.isFile && it.extension.lowercase() !in TEMP_EXTENSIONS }
             .maxByOrNull { it.length() }
             ?: throw DownloadException(DownloadError.Unknown("yt-dlp produced no output file"))
+    }
+
+    /** Replays what the in-app browser sent (login cookies, user agent, referer) when the link came from it. */
+    private fun YoutubeDLRequest.applySession(url: String) {
+        val session = sessions.forUrl(url) ?: return
+        session.userAgent?.let { addOption("--user-agent", it) }
+        session.referer?.let { addOption("--referer", it) }
+        session.cookies?.takeIf { it.isNotBlank() }?.let { addOption("--add-header", "Cookie:$it") }
     }
 
     private inline fun <T> guarded(block: () -> T): Result<T> = try {

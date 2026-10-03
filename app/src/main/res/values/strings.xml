@@ -18,6 +18,33 @@
     <string name="thumbnail_description">Video thumbnail</string>
     <string name="added_to_queue">Added to the queue (%1$s)</string>
 
+    <!-- Browser -->
+    <string name="action_browser">Browser</string>
+    <string name="action_close">Close</string>
+    <string name="browser_close">Close browser</string>
+    <string name="browser_back">Page back</string>
+    <string name="browser_forward">Page forward</string>
+    <string name="browser_home">Home page</string>
+    <string name="browser_reload">Reload</string>
+    <string name="browser_address_hint">Search or enter address</string>
+    <string name="browser_download_count">Download (%1$d)</string>
+    <string name="browser_targets_title">What do you want to download?</string>
+    <string name="browser_target_page">Video on this page</string>
+    <string name="browser_target_page_hint">Open a page first, then try again.</string>
+    <string name="browser_detected_title">Files found on this page</string>
+    <string name="browser_detected_empty">Nothing found yet. Play the video for a few seconds, then try again.</string>
+    <string name="browser_kind_video">Video file</string>
+    <string name="browser_kind_stream">Stream</string>
+    <string name="browser_kind_audio">Audio file</string>
+    <string name="browser_preparing">Looking up the video…</string>
+    <string name="browser_queue_failed">Could not add the download.</string>
+
+    <!-- Background downloads -->
+    <string name="battery_card_title">Keep downloads running</string>
+    <string name="battery_card_body">Your phone may stop downloads when the screen is off. Allow ZapFlick to run in the background.</string>
+    <string name="battery_card_allow">Allow</string>
+    <string name="battery_card_dismiss">Not now</string>
+
     <!-- Quality sheet -->
     <string name="quality_title">Choose quality</string>
     <string name="quality_loading">Checking available qualities…</string>
