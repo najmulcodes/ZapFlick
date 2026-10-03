@@ -38,6 +38,75 @@
             </intent-filter>
         </activity>
 
+        <!--
+            Opens PDF files handed over by other apps (Files, Gmail, WhatsApp, Chrome downloads).
+            standard launch mode: every file opens in the caller's task, and Back returns there.
+        -->
+        <activity
+            android:name=".ui.viewer.ViewerActivity"
+            android:exported="true"
+            android:launchMode="standard"
+            android:theme="@style/Theme.ZapFlick.Viewer">
+
+            <!-- a) The sender declares the type: Files, Gmail, WhatsApp, Chrome downloads. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="application/pdf" />
+            </intent-filter>
+
+            <!--
+                c) File managers that send no type, or star/star. Android only matches a path pattern
+                when a host is declared. Its pattern matcher cannot backtrack over dots, so names
+                with extra dots ("a.b.pdf") need their own variants. Upper case is matched
+                separately because the patterns are case-sensitive.
+                An Intent without a type matches a filter without a mimeType...
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:host="*" />
+                <data android:pathPattern=".*\\.pdf" />
+                <data android:pathPattern=".*\\..*\\.pdf" />
+                <data android:pathPattern=".*\\..*\\..*\\.pdf" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.pdf" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\.pdf" />
+                <data android:pathPattern=".*\\.PDF" />
+                <data android:pathPattern=".*\\..*\\.PDF" />
+                <data android:pathPattern=".*\\..*\\..*\\.PDF" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.PDF" />
+            </intent-filter>
+            <!-- ...and one with type star/star matches an Intent that sends exactly that. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:host="*" />
+                <data android:mimeType="*/*" />
+                <data android:pathPattern=".*\\.pdf" />
+                <data android:pathPattern=".*\\..*\\.pdf" />
+                <data android:pathPattern=".*\\..*\\..*\\.pdf" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.pdf" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\.pdf" />
+                <data android:pathPattern=".*\\.PDF" />
+                <data android:pathPattern=".*\\..*\\.PDF" />
+                <data android:pathPattern=".*\\..*\\..*\\.PDF" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.PDF" />
+            </intent-filter>
+
+            <!-- d) Share sheet: "Share" a PDF to ZapFlick. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/pdf" />
+            </intent-filter>
+        </activity>
+
         <!-- Keeps the queue alive in the background; the type is mandatory on Android 14+. -->
         <service
             android:name=".service.DownloadService"

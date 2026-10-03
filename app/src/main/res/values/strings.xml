@@ -87,6 +87,24 @@
     <string name="error_unknown">Something went wrong.</string>
     <string name="error_unknown_detail">Something went wrong: %1$s</string>
 
+    <!-- File viewer -->
+    <string name="viewer_title_fallback">Document</string>
+    <string name="viewer_action_share">Share</string>
+    <string name="viewer_action_open_with">Open with another app</string>
+    <string name="viewer_action_open_elsewhere">Open in another app</string>
+    <string name="viewer_menu_more">More options</string>
+    <string name="viewer_share_chooser_title">Share file</string>
+    <string name="viewer_open_with_chooser_title">Open with</string>
+    <string name="viewer_page_indicator">Page %1$d / %2$d</string>
+    <string name="viewer_page_description">Page %1$d</string>
+    <string name="viewer_page_failed">Could not draw this page</string>
+    <string name="viewer_error_access_lost">ZapFlick can no longer read this file. Open the file again.</string>
+    <string name="viewer_error_not_readable">ZapFlick could not read this file. Open it again from the app you got it from.</string>
+    <string name="viewer_error_password">This PDF is password protected, and ZapFlick cannot unlock it.</string>
+    <string name="viewer_error_corrupt">This PDF is damaged or is not a valid PDF file.</string>
+    <string name="viewer_error_unsupported">ZapFlick can only show PDF and HTML files.</string>
+    <string name="viewer_error_no_document">There is no file to show.</string>
+
     <!-- Notifications -->
     <string name="notification_channel_name">Downloads</string>
     <string name="notification_channel_description">Progress of active downloads</string>
