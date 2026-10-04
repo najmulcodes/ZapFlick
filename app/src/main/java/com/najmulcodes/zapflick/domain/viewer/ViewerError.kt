@@ -12,6 +12,9 @@ enum class ViewerError(val canOpenElsewhere: Boolean) {
     Corrupt(canOpenElsewhere = true),
     Unsupported(canOpenElsewhere = true),
 
+    /** An HTML file bigger than [HtmlLimits.MAX_BYTES]. */
+    TooLarge(canOpenElsewhere = true),
+
     /** The Intent carried no usable content: or file: link. */
     NoDocument(canOpenElsewhere = false),
 }

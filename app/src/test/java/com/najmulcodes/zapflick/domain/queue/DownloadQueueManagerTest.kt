@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -195,18 +195,25 @@ class DownloadQueueManagerTest {
     )
 
     // --- tests ---
+    //
+    // The manager runs in runTest's backgroundScope, and advanceUntilIdle() deliberately does not
+    // wait for background work: it returns at once when only background tasks are left. Calls such
+    // as enqueue() or pause() still worked because they suspend until the manager's scope has done
+    // its part, which lets the test scheduler run everything queued. A bare finish(...) followed
+    // by advanceUntilIdle() ran nothing, so the download looked unfinished. runCurrent() runs
+    // every task that is due now, background or not, and nothing here uses virtual time.
 
     @Test
     fun `runs at most maxConcurrent downloads and starts the next when one finishes`() = runTest {
         val h = Harness(backgroundScope, maxConcurrent = 2)
         val ids = (1..3).map { h.manager.enqueue(meta(it), FormatSelection.Best) }
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(listOf("u1", "u2"), h.engine.started)
         assertEquals(DownloadStatus.QUEUED, h.repo.statusOf(ids[2]))
 
         h.engine.finish("u1")
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(listOf("u1", "u2", "u3"), h.engine.started)
         assertEquals(DownloadStatus.COMPLETED, h.repo.statusOf(ids[0]))
@@ -217,7 +224,7 @@ class DownloadQueueManagerTest {
     fun `asks the host to keep the service running while work exists`() = runTest {
         val h = Harness(backgroundScope)
         h.manager.enqueue(meta(1), FormatSelection.Best)
-        advanceUntilIdle()
+        runCurrent()
 
         assertTrue(h.host.serviceStarts >= 1)
     }
@@ -226,21 +233,21 @@ class DownloadQueueManagerTest {
     fun `pausing keeps partial data and resuming continues the same download`() = runTest {
         val h = Harness(backgroundScope)
         val id = h.manager.enqueue(meta(1), FormatSelection.Best)
-        advanceUntilIdle()
+        runCurrent()
 
         h.manager.pause(id)
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(DownloadStatus.PAUSED, h.repo.statusOf(id))
         assertTrue(h.dirs.deleted.isEmpty())
 
         h.manager.resume(id)
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(listOf("u1", "u1"), h.engine.started)
 
         h.engine.finish("u1")
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(DownloadStatus.COMPLETED, h.repo.statusOf(id))
         assertEquals(listOf(id), h.dirs.deleted)
@@ -250,10 +257,10 @@ class DownloadQueueManagerTest {
     fun `cancelling a running download discards its partial data`() = runTest {
         val h = Harness(backgroundScope)
         val id = h.manager.enqueue(meta(1), FormatSelection.Best)
-        advanceUntilIdle()
+        runCurrent()
 
         h.manager.cancel(id)
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(DownloadStatus.CANCELLED, h.repo.statusOf(id))
         assertEquals(listOf(id), h.dirs.deleted)
@@ -264,11 +271,11 @@ class DownloadQueueManagerTest {
         val h = Harness(backgroundScope, maxConcurrent = 1)
         h.manager.enqueue(meta(1), FormatSelection.Best)
         val second = h.manager.enqueue(meta(2), FormatSelection.Best)
-        advanceUntilIdle()
+        runCurrent()
 
         h.manager.cancel(second)
         h.engine.finish("u1")
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(DownloadStatus.CANCELLED, h.repo.statusOf(second))
         assertEquals(listOf("u1"), h.engine.started)
@@ -278,10 +285,10 @@ class DownloadQueueManagerTest {
     fun `a failed download records the error and tells the host`() = runTest {
         val h = Harness(backgroundScope)
         val id = h.manager.enqueue(meta(1), FormatSelection.Best)
-        advanceUntilIdle()
+        runCurrent()
 
         h.engine.finish("u1", Result.failure(DownloadException(DownloadError.Unavailable)))
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(DownloadStatus.FAILED, h.repo.statusOf(id))
         assertEquals(DownloadError.Unavailable, h.repo.get(id)?.error)
@@ -293,16 +300,16 @@ class DownloadQueueManagerTest {
     fun `a network failure keeps partial data so a retry can continue`() = runTest {
         val h = Harness(backgroundScope)
         val id = h.manager.enqueue(meta(1), FormatSelection.Best)
-        advanceUntilIdle()
+        runCurrent()
 
         h.engine.finish("u1", Result.failure(DownloadException(DownloadError.NetworkError)))
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(DownloadStatus.FAILED, h.repo.statusOf(id))
         assertTrue(h.dirs.deleted.isEmpty())
 
         h.manager.resume(id)
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(listOf("u1", "u1"), h.engine.started)
         assertNull(h.repo.get(id)?.error)
@@ -312,10 +319,10 @@ class DownloadQueueManagerTest {
     fun `removing a running download cancels it and deletes the row`() = runTest {
         val h = Harness(backgroundScope)
         val id = h.manager.enqueue(meta(1), FormatSelection.Best)
-        advanceUntilIdle()
+        runCurrent()
 
         h.manager.remove(id)
-        advanceUntilIdle()
+        runCurrent()
 
         assertNull(h.repo.get(id))
         assertEquals(listOf(id), h.dirs.deleted)
@@ -325,10 +332,10 @@ class DownloadQueueManagerTest {
     fun `pause all stops running and queued downloads without starting new ones`() = runTest {
         val h = Harness(backgroundScope, maxConcurrent = 2)
         val ids = (1..3).map { h.manager.enqueue(meta(it), FormatSelection.Best) }
-        advanceUntilIdle()
+        runCurrent()
 
         h.manager.pauseAll()
-        advanceUntilIdle()
+        runCurrent()
 
         ids.forEach { assertEquals(DownloadStatus.PAUSED, h.repo.statusOf(it)) }
         assertEquals(2, h.engine.started.size)
@@ -341,7 +348,7 @@ class DownloadQueueManagerTest {
         h.repo.setStatus(id, DownloadStatus.RUNNING)
 
         h.manager.recover()
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(listOf("u1"), h.engine.started)
         assertEquals(DownloadStatus.RUNNING, h.repo.statusOf(id))

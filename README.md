@@ -27,21 +27,18 @@ Not yet (later phases): settings (concurrency, theme, location), playlists, in-a
 Phase 2 replaced WorkManager with an app-owned queue (`DownloadQueueManager`) and a foreground
 service. WorkManager cannot pause a job or limit how many run at once.
 
-## PDF and HTML viewer (in progress)
+## PDF and HTML viewer
 
-ZapFlick can open files handed to it by other apps. Tap a `.pdf` in Files, Downloads, WhatsApp,
-Gmail or Chrome and ZapFlick appears in the "Open with" chooser. The file opens in `ViewerActivity`,
-a separate Activity from `MainActivity` (launch mode `standard`, so Back returns to the app the file
-came from). Nothing is copied to shared storage and no storage permission is used.
+ZapFlick can open files handed to it by other apps. Tap a `.pdf`, `.html`, `.htm` or `.xhtml` file in
+Files, Downloads, WhatsApp, Gmail or Chrome and ZapFlick appears in the "Open with" chooser. The file
+opens in `ViewerActivity`, a separate Activity from `MainActivity` (launch mode `standard`, so Back
+returns to the app the file came from). Nothing is copied to shared storage and no storage permission
+is used.
 
-| Phase | Scope | Status |
-|---|---|---|
-| 1 | `ViewerActivity`, manifest filters, `DocumentTypeResolver`, PDF viewer | done |
-| 2 | HTML viewer (safe by default), "Enable scripts" / "Allow online content" toggles, view source | next |
-| 3 | "Open file" button on Home, Downloads screen opens PDF and HTML in the viewer | planned |
-
-Phase 1 only registers PDF filters. The HTML filters are added in Phase 2 together with the HTML
-viewer, so ZapFlick never offers to open a file type it cannot show yet.
+The Activity answers four kinds of Intent: `ACTION_VIEW` with a PDF type, `ACTION_VIEW` with an HTML
+type, `ACTION_VIEW` for file managers that send no type or `*/*` (matched by file name, including names
+with extra dots and upper-case extensions), and `ACTION_SEND` of a PDF or HTML file (read from
+`EXTRA_STREAM`). `DocumentTypeResolver` trusts a specific mime type and falls back to the extension.
 
 How the PDF viewer works:
 
@@ -54,6 +51,33 @@ How the PDF viewer works:
   huge page or a high zoom cannot cause an out-of-memory crash.
 - Zoom (pinch, or double tap) makes the pages wider and re-renders them at the new width. The list
   state and zoom are saved, so rotating the phone keeps your place.
+- A password-protected or damaged PDF shows a message and an "Open in another app" button.
+
+How the HTML viewer works:
+
+- **Every HTML file is treated as hostile.** The `WebView` has JavaScript off, network loads blocked,
+  and file, content and file-URL access off. DOM storage, geolocation and pop-up windows are off too,
+  and mixed content is never allowed.
+- Two switches in the toolbar menu, **Enable scripts** and **Allow online content**, are off for every
+  file and are *not* remembered: they live in the ViewModel only, never in storage. The page reloads
+  when one changes. A warning bar stays visible while either is on.
+- The file is read as text (10 MB cap, enforced while reading, not only from the reported size) and
+  given to the `WebView` with `loadDataWithBaseURL(null, ...)`. Because there is no base address,
+  **images and style sheets stored next to the file do not load**; the screen says so. Inline
+  (`data:`) images and styles inside the file work.
+- `CharsetDetector` picks the encoding: byte order mark first, then a `<meta charset>` or
+  `http-equiv` tag in the first 4 KB, then UTF-8. As in browsers, "iso-8859-1" and similar mean
+  Windows-1252, and a UTF-16 label in a readable meta tag means UTF-8.
+- Links: `http` and `https` open in the phone's browser, jumps within the page (`#section`) stay, every
+  other scheme (`javascript:`, `file:`, `content:`, `intent:`, `mailto:`, `data:` and so on) is blocked
+  (`HtmlLinkPolicy`).
+- **View source** shows the file as selectable monospace text (first 100,000 characters of a large file).
+- Back leaves the source view first, then goes back in the page, then closes the viewer. The `WebView`
+  is paused with the screen, and stopped and destroyed when the viewer closes. If the page's renderer
+  process is killed, the viewer shows a message instead of crashing the app.
+
+Both viewers:
+
 - The opened `Uri` is kept in `SavedStateHandle`. The read permission that came with the Intent does
   not survive process death, so when the system kills the app and later restores the screen, the
   viewer shows "Open the file again" instead of crashing.
@@ -62,18 +86,28 @@ How the PDF viewer works:
 - Android 10+ hides most of shared storage from a plain `file:` link. Apps that still send one cannot
   be read without a storage permission; ZapFlick says so instead of asking for the permission.
 
-Unit tests for the pure logic: `DocumentTypeResolverTest`, `PdfMathTest`.
+Unit tests for the pure logic: `DocumentTypeResolverTest`, `PdfMathTest`, `CharsetDetectorTest`,
+`HtmlLinkPolicyTest`, `HtmlViewOptionsTest`, `SourcePreviewerTest`.
 
 ### Test checklist
 
-`samples/` has `sample.pdf` (3 pages), `200-pages.pdf` (mixed page sizes) and `locked.pdf` (password
-`zapflick`, which ZapFlick does not support, so it must show the error screen).
+`samples/` has `sample.pdf` (3 pages), `200-pages.pdf` (mixed page sizes), `locked.pdf` (password
+`zapflick`, which ZapFlick does not support, so it must show the error screen), `sample.html` (script,
+online image, relative image, links), `latin1.html` (Windows-1252 with a meta tag) and
+`utf8-bom-bangla.html` (UTF-8 with a byte order mark and no meta tag).
 
-Phase 1 (PDF):
+First check that Android knows about the viewer. Both commands must list `ZapFlick`:
+
+```
+adb shell cmd package query-activities --brief -a android.intent.action.VIEW -t application/pdf
+adb shell cmd package query-activities --brief -a android.intent.action.VIEW -t text/html
+```
+
+PDF:
 
 - [ ] `adb push samples/sample.pdf /sdcard/Download/`, open it from the Files app, confirm ZapFlick
       appears in the chooser, choose "Always", reboot, open it again and confirm it still opens in ZapFlick
-- [ ] Open a PDF whose name has extra dots (`adb push sample.pdf /sdcard/Download/my.report.v2.pdf`)
+- [ ] Open a PDF whose name has extra dots (`adb push samples/sample.pdf /sdcard/Download/my.report.v2.pdf`)
 - [ ] `200-pages.pdf` scrolls end to end without an out-of-memory crash, and the "Page n / 200" label follows
 - [ ] Rotate while on page 50: the same page stays on screen
 - [ ] Pinch and double tap zoom in and out; zoomed pages get sharper after you lift your fingers
@@ -83,12 +117,24 @@ Phase 1 (PDF):
 - [ ] Open a PDF, press Home, kill ZapFlick from Recents or `adb shell am kill com.najmulcodes.zapflick.debug`,
       return to the viewer: either it reloads or it shows "Open the file again", never a crash
 
-Phase 2 (HTML), added when Phase 2 lands:
+HTML:
 
-- [ ] `adb push samples/sample.html /sdcard/Download/`, open it from Files, confirm the chooser lists ZapFlick
-- [ ] An HTML file with an inline script does nothing until "Enable scripts" is on
-- [ ] Network content stays blocked until "Allow online content" is on; both switches reset for the next file
-- [ ] Open an HTML attachment from Gmail and WhatsApp
+- [ ] `adb push samples/sample.html /sdcard/Download/`, open it from Files, confirm ZapFlick is in the
+      chooser (also try `my.page.v2.html` and `PAGE.HTM`), choose "Always", reboot, confirm it still opens
+- [ ] `sample.html`: "Scripts: OFF", the `noscript` box is visible, the online and relative images are
+      missing, the inline blue square shows
+- [ ] Menu, **Enable scripts**: the page reloads, the text says "ON", the `noscript` box disappears,
+      a red warning bar appears. Switch it off again and it goes back
+- [ ] Menu, **Allow online content**: the online image appears (the relative one still does not)
+- [ ] Open another file and then this one again: both switches are off again
+- [ ] Links: the `https` link opens the browser; "Jump to the bottom" scrolls and Back returns to the top;
+      the `mailto:`, `javascript:` and `file:` links do nothing
+- [ ] `latin1.html` shows "Café" and curly quotes; `utf8-bom-bangla.html` shows Bangla with no stray characters
+- [ ] **View source** shows the markup, text can be selected and copied; Back closes it and the page is as left
+- [ ] Rotate with scripts on: the switches stay on and the page stays
+- [ ] Too large: `head -c 12000000 /dev/zero | tr '\0' 'a' > big.html`, push it, open it: a "larger than 10 MB"
+      message and an "Open in another app" button
+- [ ] Open an HTML attachment from Gmail and from WhatsApp
 
 ## Requirements
 

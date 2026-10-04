@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZapFlick HTML sample</title>
+<style>
+  body { font-family: sans-serif; margin: 16px; line-height: 1.5; }
+  .box { border: 2px solid #007CFC; border-radius: 8px; padding: 8px 12px; margin: 12px 0; }
+  .on  { border-color: #2e7d32; }
+</style>
+</head>
+<body>
+<h1>ZapFlick HTML sample</h1>
+
+<div class="box" id="scripts">
+  <b>Scripts:</b> <span id="script-status">OFF (this text only changes when scripts run)</span>
+</div>
+<noscript><div class="box">This box is inside &lt;noscript&gt;, so it is only visible while scripts are off.</div></noscript>
+
+<div class="box">
+  <b>Online image</b> (blocked until "Allow online content" is on):<br>
+  <img alt="online image" width="120"
+       src="https://www.gstatic.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png">
+</div>
+
+<div class="box">
+  <b>Relative image</b> (never loads: files next to this one are not read):<br>
+  <img alt="relative image" width="120" src="logo.png">
+</div>
+
+<div class="box">
+  <b>Inline image</b> (always works, it is inside the file):<br>
+  <img alt="inline image" width="48" height="48"
+       src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='10' fill='%23007CFC'/%3E%3C/svg%3E">
+</div>
+
+<h2>Links</h2>
+<ul>
+  <li><a href="https://example.com/">https link</a>: opens in your browser</li>
+  <li><a href="#bottom">Jump to the bottom</a>: stays in the page</li>
+  <li><a href="mailto:test@example.com">mailto link</a>: blocked, nothing happens</li>
+  <li><a href="javascript:document.title='clicked'">javascript link</a>: blocked, nothing happens</li>
+  <li><a href="file:///sdcard/Download/sample.pdf">file link</a>: blocked, nothing happens</li>
+</ul>
+
+<div style="height: 900px"></div>
+<h2 id="bottom">Bottom of the page</h2>
+
+<script>
+  var s = document.getElementById('script-status');
+  s.textContent = 'ON (a script just changed this text)';
+  document.getElementById('scripts').className = 'box on';
+</script>
+</body>
+</html>

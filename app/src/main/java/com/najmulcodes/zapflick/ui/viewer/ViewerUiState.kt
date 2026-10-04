@@ -13,6 +13,12 @@ sealed interface ViewerUiState {
         val pages: List<PdfPageSize>,
     ) : ViewerUiState
 
+    /** [html] is the decoded text of the file (at most 10 MB of it). */
+    data class Html(
+        val info: DocumentInfo,
+        val html: String,
+    ) : ViewerUiState
+
     data class Error(
         val error: ViewerError,
         val info: DocumentInfo?,
@@ -25,6 +31,7 @@ val ViewerUiState.handOffMimeType: String?
     get() = when (this) {
         ViewerUiState.Loading -> null
         is ViewerUiState.Pdf -> DocumentType.Pdf.mimeType
+        is ViewerUiState.Html -> DocumentType.Html.mimeType
         is ViewerUiState.Error -> when {
             !error.canOpenElsewhere -> null
             documentType != DocumentType.Unsupported -> documentType.mimeType

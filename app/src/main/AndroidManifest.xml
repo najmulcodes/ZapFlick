@@ -39,8 +39,9 @@
         </activity>
 
         <!--
-            Opens PDF files handed over by other apps (Files, Gmail, WhatsApp, Chrome downloads).
-            standard launch mode: every file opens in the caller's task, and Back returns there.
+            Opens PDF and HTML files handed over by other apps (Files, Gmail, WhatsApp, Chrome
+            downloads). standard launch mode: every file opens in the caller's task, and Back
+            returns there.
         -->
         <activity
             android:name=".ui.viewer.ViewerActivity"
@@ -55,6 +56,14 @@
                 <data android:scheme="content" />
                 <data android:scheme="file" />
                 <data android:mimeType="application/pdf" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="text/html" />
+                <data android:mimeType="application/xhtml+xml" />
             </intent-filter>
 
             <!--
@@ -79,6 +88,27 @@
                 <data android:pathPattern=".*\\..*\\.PDF" />
                 <data android:pathPattern=".*\\..*\\..*\\.PDF" />
                 <data android:pathPattern=".*\\..*\\..*\\..*\\.PDF" />
+                <data android:pathPattern=".*\\.html" />
+                <data android:pathPattern=".*\\..*\\.html" />
+                <data android:pathPattern=".*\\..*\\..*\\.html" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.html" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\.html" />
+                <data android:pathPattern=".*\\.HTML" />
+                <data android:pathPattern=".*\\..*\\.HTML" />
+                <data android:pathPattern=".*\\..*\\..*\\.HTML" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.HTML" />
+                <data android:pathPattern=".*\\.htm" />
+                <data android:pathPattern=".*\\..*\\.htm" />
+                <data android:pathPattern=".*\\..*\\..*\\.htm" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.htm" />
+                <data android:pathPattern=".*\\.HTM" />
+                <data android:pathPattern=".*\\..*\\.HTM" />
+                <data android:pathPattern=".*\\..*\\..*\\.HTM" />
+                <data android:pathPattern=".*\\.xhtml" />
+                <data android:pathPattern=".*\\..*\\.xhtml" />
+                <data android:pathPattern=".*\\..*\\..*\\.xhtml" />
+                <data android:pathPattern=".*\\.XHTML" />
+                <data android:pathPattern=".*\\..*\\.XHTML" />
             </intent-filter>
             <!-- ...and one with type star/star matches an Intent that sends exactly that. -->
             <intent-filter>
@@ -97,13 +127,35 @@
                 <data android:pathPattern=".*\\..*\\.PDF" />
                 <data android:pathPattern=".*\\..*\\..*\\.PDF" />
                 <data android:pathPattern=".*\\..*\\..*\\..*\\.PDF" />
+                <data android:pathPattern=".*\\.html" />
+                <data android:pathPattern=".*\\..*\\.html" />
+                <data android:pathPattern=".*\\..*\\..*\\.html" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.html" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\.html" />
+                <data android:pathPattern=".*\\.HTML" />
+                <data android:pathPattern=".*\\..*\\.HTML" />
+                <data android:pathPattern=".*\\..*\\..*\\.HTML" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.HTML" />
+                <data android:pathPattern=".*\\.htm" />
+                <data android:pathPattern=".*\\..*\\.htm" />
+                <data android:pathPattern=".*\\..*\\..*\\.htm" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.htm" />
+                <data android:pathPattern=".*\\.HTM" />
+                <data android:pathPattern=".*\\..*\\.HTM" />
+                <data android:pathPattern=".*\\..*\\..*\\.HTM" />
+                <data android:pathPattern=".*\\.xhtml" />
+                <data android:pathPattern=".*\\..*\\.xhtml" />
+                <data android:pathPattern=".*\\..*\\..*\\.xhtml" />
+                <data android:pathPattern=".*\\.XHTML" />
+                <data android:pathPattern=".*\\..*\\.XHTML" />
             </intent-filter>
 
-            <!-- d) Share sheet: "Share" a PDF to ZapFlick. -->
+            <!-- d) Share sheet: "Share" a PDF or HTML file to ZapFlick (read from EXTRA_STREAM). -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/pdf" />
+                <data android:mimeType="text/html" />
             </intent-filter>
         </activity>
 

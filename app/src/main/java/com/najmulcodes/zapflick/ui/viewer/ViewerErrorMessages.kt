@@ -13,6 +13,7 @@ fun ViewerError.displayMessage(): String = stringResource(
         ViewerError.PasswordProtected -> R.string.viewer_error_password
         ViewerError.Corrupt -> R.string.viewer_error_corrupt
         ViewerError.Unsupported -> R.string.viewer_error_unsupported
+        ViewerError.TooLarge -> R.string.viewer_error_too_large
         ViewerError.NoDocument -> R.string.viewer_error_no_document
     },
 )

@@ -39,6 +39,13 @@ fun openDocumentElsewhere(context: Context, uri: Uri, mimeType: String): Boolean
     return startSafely(context, chooser)
 }
 
+/** Opens a web link from an HTML page in the phone's browser. */
+fun openWebLink(context: Context, url: String): Boolean {
+    val view = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        .addCategory(Intent.CATEGORY_BROWSABLE)
+    return startSafely(context, view)
+}
+
 private fun startSafely(context: Context, intent: Intent): Boolean = try {
     context.startActivity(intent)
     true
