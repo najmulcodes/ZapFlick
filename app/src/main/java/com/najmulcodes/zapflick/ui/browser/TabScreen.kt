@@ -28,11 +28,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
@@ -65,6 +65,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -561,7 +562,7 @@ private fun BrowserTopBar(
                         keyboardActions = KeyboardActions(onGo = { onGo() }),
                     )
                     IconButton(onClick = onReload) {
-                        Icon(Icons.Filled.Refresh, stringResource(R.string.browser_reload))
+                        Icon(Icons.Outlined.Refresh, stringResource(R.string.browser_reload))
                     }
                 } else {
                     Box(modifier = Modifier.weight(1f))
@@ -575,7 +576,7 @@ private fun BrowserTopBar(
                     }
                     IconButton(onClick = onShield, modifier = Modifier.semantics { contentDescription = shieldLabel }) {
                         Icon(
-                            Icons.Filled.CheckCircle,
+                            painterResource(if (adBlockOn) R.drawable.ic_shield_check else R.drawable.ic_shield),
                             contentDescription = null,
                             tint = if (adBlockOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -586,15 +587,15 @@ private fun BrowserTopBar(
                 }
                 if (!showAddress) {
                     IconButton(onClick = onHelp) {
-                        Icon(Icons.Filled.Info, stringResource(R.string.how_to_download))
+                        Icon(Icons.Outlined.Info, stringResource(R.string.how_to_download))
                     }
                     IconButton(onClick = onSettings) {
-                        Icon(Icons.Filled.Settings, stringResource(R.string.settings_title))
+                        Icon(Icons.Outlined.Settings, stringResource(R.string.settings_title))
                     }
                 }
                 Box {
                     IconButton(onClick = { menuOpen = true }) {
-                        Icon(Icons.Filled.MoreVert, stringResource(R.string.viewer_menu_more))
+                        Icon(Icons.Outlined.MoreVert, stringResource(R.string.viewer_menu_more))
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                         DropdownMenuItem(

@@ -7,6 +7,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColors = darkColorScheme(
@@ -28,8 +29,22 @@ private val DarkColors = darkColorScheme(
 
 private val LightColors = lightColorScheme(
     primary = LightPrimary,
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFFDDE4FF),
+    onPrimaryContainer = Color(0xFF000F5C),
+    secondary = Color(0xFF6B3FC4),
+    tertiary = Color(0xFF8A5100),
     background = LightBackground,
+    onBackground = Color(0xFF171B22),
     surface = LightBackground,
+    onSurface = Color(0xFF171B22),
+    surfaceVariant = Color(0xFFE1E4EC),
+    onSurfaceVariant = Color(0xFF4B5160),
+    surfaceContainer = Color(0xFFEDEFF6),
+    surfaceContainerHigh = Color(0xFFE7E9F1),
+    surfaceContainerHighest = Color(0xFFE1E4EC),
+    outline = Color(0xFF7A8090),
+    outlineVariant = Color(0xFFC6CAD6),
 )
 
 /** Dark-first with the brand palette. Dynamic color is opt-in so the brand colors win by default. */

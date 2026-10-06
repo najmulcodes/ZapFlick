@@ -21,8 +21,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -114,12 +114,12 @@ fun PrivateFolderScreen(
                         title = { Text(stringResource(R.string.private_title)) },
                         navigationIcon = {
                             IconButton(onClick = onBack) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.action_back))
                             }
                         },
                         actions = {
                             IconButton(onClick = { viewModel.lockNow(); onBack() }) {
-                                Icon(Icons.Filled.Lock, contentDescription = stringResource(R.string.private_lock_now))
+                                Icon(Icons.Outlined.Lock, contentDescription = stringResource(R.string.private_lock_now))
                             }
                         },
                     )

@@ -11,7 +11,9 @@ import androidx.compose.runtime.setValue
 import androidx.fragment.app.FragmentActivity
 import com.najmulcodes.zapflick.domain.settings.SettingsRepository
 import com.najmulcodes.zapflick.domain.settings.ThemeMode
+import androidx.activity.SystemBarStyle
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.DisposableEffect
 import javax.inject.Inject
 import com.najmulcodes.zapflick.ui.navigation.AppNavHost
 import com.najmulcodes.zapflick.ui.theme.ZapFlickTheme
@@ -41,6 +43,11 @@ class MainActivity : FragmentActivity() {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
                 ThemeMode.DARK -> true
                 ThemeMode.LIGHT -> false
+            }
+            DisposableEffect(dark) {
+                val bars = SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT) { dark }
+                enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
+                onDispose { }
             }
             ZapFlickTheme(darkTheme = dark, dynamicColor = settings.dynamicColor) {
                 AppNavHost(

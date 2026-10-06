@@ -26,12 +26,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Menu
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -135,7 +135,7 @@ fun FinishedScreen(
                     actions = {
                         Box {
                             IconButton(onClick = onOpenPrivate) {
-                                Icon(Icons.Filled.Lock, contentDescription = stringResource(R.string.finished_private_folder))
+                                Icon(Icons.Outlined.Lock, contentDescription = stringResource(R.string.finished_private_folder))
                             }
                             if (content?.hasNewPrivate == true) {
                                 Box(
@@ -151,7 +151,7 @@ fun FinishedScreen(
                         if (content != null) {
                             IconButton(onClick = { viewModel.setGrid(!content.asGrid) }) {
                                 Icon(
-                                    Icons.Filled.Menu,
+                                    Icons.Outlined.Menu,
                                     contentDescription = stringResource(
                                         if (content.asGrid) R.string.finished_show_list else R.string.finished_show_grid,
                                     ),
@@ -293,19 +293,19 @@ private fun SelectionBar(
     TopAppBar(
         navigationIcon = {
             IconButton(onClick = onClose) {
-                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_cancel))
+                Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.action_cancel))
             }
         },
         title = { Text(stringResource(R.string.finished_selected, count)) },
         actions = {
             IconButton(onClick = onSelectAll) {
-                Icon(Icons.Filled.Check, contentDescription = stringResource(R.string.finished_select_all))
+                Icon(Icons.Outlined.Check, contentDescription = stringResource(R.string.finished_select_all))
             }
             IconButton(onClick = onMoveToPrivate) {
-                Icon(Icons.Filled.Lock, contentDescription = stringResource(R.string.finished_move_private))
+                Icon(Icons.Outlined.Lock, contentDescription = stringResource(R.string.finished_move_private))
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.action_delete))
+                Icon(Icons.Outlined.Delete, contentDescription = stringResource(R.string.action_delete))
             }
         },
     )
@@ -360,7 +360,7 @@ private fun FinishedTile(
                 )
                 if (selected) {
                     Icon(
-                        Icons.Filled.Check,
+                        Icons.Outlined.Check,
                         contentDescription = stringResource(R.string.finished_selected_item),
                         tint = Color.White,
                         modifier = Modifier
@@ -387,7 +387,7 @@ private fun FinishedTile(
             if (!selecting) {
                 Box {
                     IconButton(onClick = { menu = true }) {
-                        Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.viewer_menu_more))
+                        Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.viewer_menu_more))
                     }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                         DropdownMenuItem(

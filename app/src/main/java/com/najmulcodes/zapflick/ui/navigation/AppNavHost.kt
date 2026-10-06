@@ -4,9 +4,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Done
+import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
@@ -58,9 +58,9 @@ object Routes {
 private data class TopLevel(val route: String, val label: Int, val icon: ImageVector)
 
 private val TOP_LEVEL = listOf(
-    TopLevel(Routes.TAB, R.string.nav_tab, Icons.Filled.Search),
-    TopLevel(Routes.PROGRESS, R.string.nav_progress, Icons.Filled.PlayArrow),
-    TopLevel(Routes.FINISHED, R.string.nav_finished, Icons.Filled.Done),
+    TopLevel(Routes.TAB, R.string.nav_tab, Icons.Outlined.Search),
+    TopLevel(Routes.PROGRESS, R.string.nav_progress, Icons.Outlined.PlayArrow),
+    TopLevel(Routes.FINISHED, R.string.nav_finished, Icons.Outlined.Done),
 )
 
 /** Opens a bottom-bar destination, keeping its own back stack so returning to it restores where you were. */

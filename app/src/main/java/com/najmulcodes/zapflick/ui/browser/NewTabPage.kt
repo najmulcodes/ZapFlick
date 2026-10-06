@@ -1,6 +1,7 @@
 package com.najmulcodes.zapflick.ui.browser
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,8 +24,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -95,7 +97,7 @@ fun NewTabPage(
             placeholder = { Text(stringResource(R.string.tab_search_hint)) },
             trailingIcon = {
                 IconButton(onClick = submit) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = stringResource(R.string.tab_search_go))
+                    Icon(Icons.AutoMirrored.Outlined.ArrowForward, contentDescription = stringResource(R.string.tab_search_go))
                 }
             },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
@@ -113,6 +115,7 @@ fun NewTabPage(
                             } else {
                                 SiteTile(
                                     title = site.title,
+                                    url = site.url,
                                     onClick = { onOpen(site.url) },
                                     onLongClick = { onFavoriteLongPress(site) },
                                 )
@@ -133,7 +136,7 @@ fun NewTabPage(
                 )
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(recents, key = { it.url }) { entry ->
-                        RecentChip(title = entry.title, onClick = { onOpen(entry.url) })
+                        RecentChip(title = entry.title, url = entry.url, onClick = { onOpen(entry.url) })
                     }
                 }
             }
@@ -147,7 +150,7 @@ fun NewTabPage(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SiteTile(title: String, onClick: () -> Unit, onLongClick: () -> Unit) {
+private fun SiteTile(title: String, url: String, onClick: () -> Unit, onLongClick: () -> Unit) {
     Column(
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
@@ -156,7 +159,7 @@ private fun SiteTile(title: String, onClick: () -> Unit, onLongClick: () -> Unit
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Monogram(title = title, size = 56)
+        Monogram(title = title, size = 56, url = url)
         Text(
             text = title,
             style = MaterialTheme.typography.labelMedium,
@@ -187,7 +190,7 @@ private fun AddTile(onClick: () -> Unit) {
                 .background(MaterialTheme.colorScheme.surfaceContainerHighest),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Filled.Add, contentDescription = null)
+            Icon(Icons.Outlined.Add, contentDescription = null)
         }
         Spacer(modifier = Modifier.height(18.dp))
     }
@@ -198,7 +201,7 @@ private fun Modifier.combinedClickableSimple(onClick: () -> Unit): Modifier =
     this.combinedClickable(onClick = onClick)
 
 @Composable
-private fun RecentChip(title: String, onClick: () -> Unit) {
+private fun RecentChip(title: String, url: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(20.dp))
@@ -208,7 +211,7 @@ private fun RecentChip(title: String, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Monogram(title = title, size = 24)
+        Monogram(title = title, size = 24, url = url)
         Text(
             text = title,
             style = MaterialTheme.typography.labelLarge,
@@ -219,9 +222,28 @@ private fun RecentChip(title: String, onClick: () -> Unit) {
     }
 }
 
-/** A site's tile: its first letter on the brand gradient. The site's own logo is never used. */
+/** Bundled brand marks (Simple Icons, CC0) for the default sites. Anything else gets its first letter. */
+private fun logoFor(url: String?): Int? {
+    val host = url
+        ?.let { runCatching { android.net.Uri.parse(it).host }.getOrNull() }
+        ?.lowercase()
+        ?: return null
+    fun on(vararg domains: String) = domains.any { host == it || host.endsWith(".$it") }
+    return when {
+        on("facebook.com", "fb.com") -> R.drawable.ic_site_facebook
+        on("instagram.com") -> R.drawable.ic_site_instagram
+        on("vimeo.com") -> R.drawable.ic_site_vimeo
+        on("dailymotion.com", "dai.ly") -> R.drawable.ic_site_dailymotion
+        on("tiktok.com") -> R.drawable.ic_site_tiktok
+        on("x.com", "twitter.com") -> R.drawable.ic_site_x
+        else -> null
+    }
+}
+
+/** A site's tile: its logo in white on the brand gradient, or its first letter when there is no bundled logo. */
 @Composable
-fun Monogram(title: String, size: Int, modifier: Modifier = Modifier) {
+fun Monogram(title: String, size: Int, modifier: Modifier = Modifier, url: String? = null) {
+    val logo = logoFor(url)
     Box(
         modifier = modifier
             .size(size.dp)
@@ -229,10 +251,18 @@ fun Monogram(title: String, size: Int, modifier: Modifier = Modifier) {
             .background(BrandGradient),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = FavoriteRules.monogram(title),
-            color = Color.White,
-            style = if (size >= 40) MaterialTheme.typography.titleLarge else MaterialTheme.typography.labelLarge,
-        )
+        if (logo != null) {
+            Image(
+                painter = painterResource(logo),
+                contentDescription = null,
+                modifier = Modifier.size((size * 0.5f).dp),
+            )
+        } else {
+            Text(
+                text = FavoriteRules.monogram(title),
+                color = Color.White,
+                style = if (size >= 40) MaterialTheme.typography.titleLarge else MaterialTheme.typography.labelLarge,
+            )
+        }
     }
 }

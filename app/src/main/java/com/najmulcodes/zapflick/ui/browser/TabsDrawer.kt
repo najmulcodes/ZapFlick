@@ -21,12 +21,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -120,7 +120,7 @@ fun TabsDrawer(
                                 modifier = Modifier
                                     .clickable { onFavorite(site) }
                                     .padding(4.dp),
-                            ) { Monogram(title = site.title, size = 40) }
+                            ) { Monogram(title = site.title, size = 40, url = site.url) }
                         }
                     }
                     HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
@@ -154,7 +154,7 @@ private fun DrawerHeader(onNewTab: () -> Unit, onCloseAll: () -> Unit) {
         )
         Box {
             IconButton(onClick = { menuOpen = true }) {
-                Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.tabs_menu))
+                Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.tabs_menu))
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 DropdownMenuItem(
@@ -198,7 +198,7 @@ private fun TabRow(tab: TabInfo, active: Boolean, onClick: () -> Unit, onClose: 
             modifier = Modifier.weight(1f),
         )
         IconButton(onClick = onClose) {
-            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.tabs_close_tab, title))
+            Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.tabs_close_tab, title))
         }
     }
 }
@@ -219,16 +219,16 @@ private fun NavigationRow(
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
         IconButton(onClick = onBack, enabled = canGoBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.browser_back))
+            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.browser_back))
         }
         IconButton(onClick = onHome) {
-            Icon(Icons.Filled.Home, contentDescription = stringResource(R.string.browser_home))
+            Icon(Icons.Outlined.Home, contentDescription = stringResource(R.string.browser_home))
         }
         IconButton(onClick = onForward, enabled = canGoForward) {
-            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = stringResource(R.string.browser_forward))
+            Icon(Icons.AutoMirrored.Outlined.ArrowForward, contentDescription = stringResource(R.string.browser_forward))
         }
         IconButton(onClick = onNewTab) {
-            Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.tabs_new))
+            Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.tabs_new))
         }
     }
 }

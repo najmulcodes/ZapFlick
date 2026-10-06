@@ -10,10 +10,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -92,7 +92,7 @@ fun ViewerScreen(
                 title = { Text(text = title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 actions = {
@@ -100,7 +100,7 @@ fun ViewerScreen(
                     val showable = isHtml || state is ViewerUiState.Pdf
                     if (showable && handOffMime != null) {
                         IconButton(onClick = shareAction) {
-                            Icon(Icons.Filled.Share, contentDescription = stringResource(R.string.viewer_action_share))
+                            Icon(Icons.Outlined.Share, contentDescription = stringResource(R.string.viewer_action_share))
                         }
                     }
                     if (showable && (isHtml || handOffMime != null)) {
@@ -196,7 +196,7 @@ private fun HtmlNotice(options: HtmlViewOptions) {
             )
             if (!warning) {
                 IconButton(onClick = { dismissed = true }) {
-                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.viewer_html_notice_dismiss))
+                    Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.viewer_html_notice_dismiss))
                 }
             }
         }
@@ -219,7 +219,7 @@ private fun ViewerMenu(
     var expanded by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { expanded = true }) {
-            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.viewer_menu_more))
+            Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.viewer_menu_more))
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             if (htmlOptions != null) {
