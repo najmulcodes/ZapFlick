@@ -45,7 +45,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -369,16 +368,9 @@ fun TabScreen(
             },
             snackbarHost = { SnackbarHost(snackbarHostState) },
         ) { padding ->
-            PullToRefreshBox(
-                isRefreshing = refreshing,
-                onRefresh = {
-                    if (!activeTab.isNewTabPage) {
-                        refreshing = true
-                        webView.reload()
-                    }
-                },
-                modifier = Modifier.padding(padding).fillMaxSize(),
-            ) {
+            // No pull-to-refresh: it steals drags from scrollable boxes inside pages (age gates, pop-ups).
+            // The reload button in the address bar does the same job.
+            Box(modifier = Modifier.padding(padding).fillMaxSize()) {
                 AndroidView(
                     factory = { webView },
                     modifier = Modifier.fillMaxSize(),
