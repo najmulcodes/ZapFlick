@@ -13,10 +13,14 @@ object YtDlpOptions {
     // Highest resolution first; among equals prefer h264 + m4a so players are happy.
     private const val VIDEO_SORT = "res,vcodec:h264,acodec:m4a"
 
-    fun forDownload(selection: FormatSelection, outputDir: String): List<YtDlpOption> = buildList {
+    fun forDownload(
+        selection: FormatSelection,
+        outputDir: String,
+        template: String = OUTPUT_TEMPLATE,
+    ): List<YtDlpOption> = buildList {
         add(YtDlpOption("--no-playlist"))
         add(YtDlpOption("--no-mtime"))
-        add(YtDlpOption("-o", "$outputDir/$OUTPUT_TEMPLATE"))
+        add(YtDlpOption("-o", "$outputDir/$template"))
         addAll(formatOptions(selection))
     }
 

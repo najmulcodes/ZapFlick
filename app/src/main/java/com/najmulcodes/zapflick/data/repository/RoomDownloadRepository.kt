@@ -10,6 +10,7 @@ import com.najmulcodes.zapflick.domain.model.FormatSelection
 import com.najmulcodes.zapflick.domain.model.SavedMedia
 import com.najmulcodes.zapflick.domain.model.VideoMetadata
 import com.najmulcodes.zapflick.domain.repository.DownloadRepository
+import com.najmulcodes.zapflick.domain.repository.PrivateItemsStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -18,7 +19,7 @@ import javax.inject.Singleton
 @Singleton
 class RoomDownloadRepository @Inject constructor(
     private val dao: DownloadDao,
-) : DownloadRepository {
+) : DownloadRepository, PrivateItemsStore {
 
     override fun observeAll(): Flow<List<DownloadItem>> =
         dao.observeAll().map { entities -> entities.map { it.toDomain() } }
@@ -80,6 +81,10 @@ class RoomDownloadRepository @Inject constructor(
         val ids = dao.finishedIds()
         dao.deleteFinished()
         return ids
+    }
+
+    override suspend fun setPrivate(id: Long, isPrivate: Boolean, media: SavedMedia) {
+        dao.setPrivate(id, isPrivate, media.uri, media.location, now())
     }
 
     private fun now(): Long = System.currentTimeMillis()

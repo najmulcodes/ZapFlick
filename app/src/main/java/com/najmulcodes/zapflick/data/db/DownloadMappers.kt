@@ -19,4 +19,5 @@ internal fun DownloadEntity.toDomain(): DownloadItem = DownloadItem(
     saved = savedUri?.let { SavedMedia(uri = it, displayName = savedName.orEmpty(), location = savedLocation.orEmpty()) },
     createdAt = createdAt,
     updatedAt = updatedAt,
+    isPrivate = isPrivate,
 )

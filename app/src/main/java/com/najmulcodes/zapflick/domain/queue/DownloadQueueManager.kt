@@ -168,6 +168,11 @@ class DownloadQueueManager @Inject constructor(
         }
     }
 
+    /** Starts whatever is waiting if there is room now: call after a limit or the Wi-Fi gate changed. */
+    suspend fun refill() {
+        mutex.withLock { fillSlots() }
+    }
+
     private suspend fun fillSlots() {
         pumpLocked()
         if (running.isNotEmpty()) host.ensureServiceRunning()
@@ -175,6 +180,7 @@ class DownloadQueueManager @Inject constructor(
 
     /** Starts queued items until every slot is busy. */
     private suspend fun pumpLocked() {
+        if (!config.canStart) return
         val free = config.maxConcurrent - running.size
         if (free <= 0) return
         for (item in repository.nextQueued(free)) {

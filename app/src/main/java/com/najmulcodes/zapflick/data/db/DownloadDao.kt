@@ -50,9 +50,17 @@ interface DownloadDao {
     @Query("DELETE FROM downloads WHERE id = :id")
     suspend fun delete(id: Long)
 
-    @Query("SELECT id FROM downloads WHERE status IN ('COMPLETED', 'FAILED', 'CANCELLED')")
+    // Items in the private folder are never swept away by "Clear finished".
+    @Query("SELECT id FROM downloads WHERE status IN ('COMPLETED', 'FAILED', 'CANCELLED') AND is_private = 0")
     suspend fun finishedIds(): List<Long>
 
-    @Query("DELETE FROM downloads WHERE status IN ('COMPLETED', 'FAILED', 'CANCELLED')")
+    @Query("DELETE FROM downloads WHERE status IN ('COMPLETED', 'FAILED', 'CANCELLED') AND is_private = 0")
     suspend fun deleteFinished()
+
+    /** Moves an item into or out of the private folder, pointing it at the file's new place. */
+    @Query(
+        "UPDATE downloads SET is_private = :isPrivate, saved_uri = :uri, saved_location = :location, " +
+            "updated_at = :now WHERE id = :id",
+    )
+    suspend fun setPrivate(id: Long, isPrivate: Boolean, uri: String, location: String, now: Long)
 }

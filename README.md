@@ -5,27 +5,91 @@ Personal-use Android video downloader built on [yt-dlp](https://github.com/yt-dl
 
 Kotlin, Jetpack Compose, Material 3, Hilt, Room, a foreground service. Min SDK 26, target SDK 35.
 
-## Status: Phase 2 (merged Phase 1 + 2)
+## Status: version 0.3.0
 
-Working now:
+The app has three tabs at the bottom (**Tab, Progress, Finished**), a Settings screen, a browser with
+tabs, a PDF and HTML viewer, and a private folder behind a PIN.
 
-- Paste a link, or share one from any app (`ACTION_SEND` text/plain)
-- Metadata fetch (title, thumbnail, duration, uploader)
-- Quality sheet: best quality, each resolution the site offers, or audio only (MP3 / M4A), with
-  estimated sizes (sizes are estimates, and some sites report none)
-- Download queue stored in Room: oldest first, two at a time
-- Pause, resume, cancel and retry per download. Pausing keeps the partial files, so resume continues
-  where it stopped
-- Downloads screen with live progress, plus history of finished, failed and cancelled items
-- One foreground-service notification for the whole queue ("Pause all" / "Cancel all"), and a
-  notification when each download finishes or fails
-- Downloads interrupted by the app being killed are re-queued the next time the app opens
-- Finished files are published to `Movies/ZapFlick` (video) or `Music/ZapFlick` (audio) through MediaStore
+- **Tab**: a new-tab page (search field, favorite sites you can add, remove and reorder, recently used
+  websites) and a real browser with up to 20 tabs, ad blocking, desktop-site mode, fullscreen video and
+  a Download button. Paste or type a link, or share one from another app (`ACTION_SEND` text/plain):
+  a shared link opens in a new tab and the download sheet opens by itself.
+- **Progress**: running, waiting, paused, failed and cancelled downloads with pause, resume, cancel and
+  retry. A banner leads to *Background setup* until the battery exemption is granted.
+- **Finished**: finished downloads as a list or grid. Long-press to select, then delete or move to the
+  private folder. PDF and HTML files open in ZapFlick's viewer. A footer shows storage used.
+- **Settings**: download folder, Wi-Fi only, how many downloads at once, default quality, file name
+  style, ad blocking, search engine, clear cache, history and cookies, language, sync to gallery, theme,
+  dynamic color, privacy switches, yt-dlp version and in-place update, help.
+- **Private folder**: files moved here leave the gallery and the Finished list. See the limits below.
 
-Not yet (later phases): settings (concurrency, theme, location), playlists, in-app yt-dlp update.
+Downloads still work as before: an app-owned queue in Room, pause and resume that keep partial files,
+one foreground-service notification, and re-queueing after the app is killed.
 
-Phase 2 replaced WorkManager with an app-owned queue (`DownloadQueueManager`) and a foreground
-service. WorkManager cannot pause a job or limit how many run at once.
+### Settings
+
+Settings live in a DataStore behind the `SettingsRepository` interface (`domain/settings`). The queue
+reads the concurrency limit and the Wi-Fi gate every time it decides what to start, so changes apply at
+once.
+
+| Setting | What it does |
+|---|---|
+| Download location | Default: `Movies/ZapFlick` and `Music/ZapFlick` through MediaStore. Or a folder picked with the system folder picker (`OpenDocumentTree`, permission persisted), saved through `TreeUriSaver`. No storage permission either way. |
+| Sync to gallery | **On:** finished files go through MediaStore and show in the gallery. **Off:** they stay in `filesDir/library`, hidden from other apps, and are deleted when ZapFlick is uninstalled. They play in the in-app player. A chosen folder takes priority over this switch. |
+| Wi-Fi only | A default-network callback (`NetworkMonitor`) decides between Wi-Fi/unmetered, mobile data and offline. On mobile data running downloads are paused and waiting ones are not started; when Wi-Fi returns, exactly the downloads the app paused are resumed (ones you paused yourself stay paused). |
+| Downloads at once | 1 to 4. |
+| Default quality | Ask every time, or a fixed quality that skips the sheet. |
+| File name | One of four styles (title and id, title, uploader and title, date and title), turned into a yt-dlp template. A fixed list on purpose: free text could produce a broken template. |
+| Language | Opens the system per-app language page (Android 13+). Only English ships, so `locales_config.xml` lists only `en`; add `values-bn/strings.xml` and a `bn` entry to offer Bangla. |
+| Theme, dynamic color | System, dark or light (default dark). Dynamic color is off by default so the brand colors win. |
+| yt-dlp | Shows the installed version, and *Update yt-dlp* downloads the stable or nightly build in place. |
+
+### Browser
+
+- Tabs: `TabManager` keeps the list (`TabList`, at most 20, always at least one). Only the tab on screen
+  has a live `WebView`; leaving a tab saves its page state in memory and coming back restores it. The
+  list (where each tab was, not its page history) is written to DataStore, so tabs survive the app being
+  killed.
+- Favorite sites and history are Room tables (`favorite_sites`, `browser_history`). The default sites
+  are added once; deleting them all does not bring them back. History keeps one row per address, at most
+  500, and records nothing while *Recently used websites* is off.
+- **Ad blocking** matches a request's host (and its parent domains) against `assets/adblock_hosts.txt`
+  in `shouldInterceptRequest` and answers with an empty response. The list is read from the app and
+  **never downloaded at runtime**. Source: [StevenBlack/hosts](https://github.com/StevenBlack/hosts),
+  unified hosts file, **MIT licence**, 72,233 domains, fetched 2026-10-05 and reduced to one host per
+  line. To refresh it, replace the file with a newer copy in the same format. Hosts lists block whole
+  domains, so some pages may look different; switch *Block ads* off in Settings if one breaks.
+- Pop-ups: opened only after a tap, and then in the same tab. Camera, microphone and location are never
+  granted to a page. Bad certificates are refused. Links to other apps (`intent:`, `market:`) are ignored.
+- Load errors show a page with a Retry button. Fullscreen video uses an overlay with the system bars
+  hidden and landscape allowed; Back leaves it.
+- The browser still shares cookies, user agent and referer with yt-dlp, except for YouTube.
+
+### Private folder
+
+- The lock icon on the Finished screen opens it. The first time you set a 4-digit PIN (enter, then
+  confirm); afterwards you enter it. Fingerprint or face unlock is an optional switch in Settings.
+- The PIN is stored as **PBKDF2WithHmacSHA256, random 16-byte salt, 120,000 iterations**, compared in
+  constant time. Wrong tries are counted: two are free, then the app locks for 30 seconds, 1 minute,
+  5 minutes and 15 minutes, and the counter is stored, so restarting the app does not reset it.
+- Moving a file copies it into `filesDir/private/<random>.<ext>`, checks the copy, then removes the public
+  copy (and its MediaStore row, so it leaves the gallery). *Restore* puts it back through the normal
+  saver. Private items never appear in Finished or Progress and are not touched by "Clear".
+- Private videos and audio open in an in-app player, so the file is never handed to another app.
+- The PIN and private screens block screenshots and the recents preview (`FLAG_SECURE`; a switch in
+  Settings turns it off). The folder locks by itself after the app has been in the background for more
+  than 30 seconds.
+- **The PIN is a privacy gate, not encryption.** The files are ordinary files in the app's private
+  storage: anyone who can read that storage (a rooted phone, a backup tool, a forensic tool) can read them.
+  Encryption at rest (for example Tink streaming AEAD with a Keystore key) is deliberately **not** part of
+  this version; it is planned as a separate step.
+
+### Database
+
+Room is at **version 2**. The migration from 1 (`MigrationSql.V1_TO_V2`) adds `downloads.is_private`
+(default 0, so every existing download stays public) and the two browser tables. There is no destructive
+fallback: a schema change must ship with a migration, or the history would be wiped. The SQL is checked
+by `MigrationSqlTest` (it must never drop or delete anything and must use the names Room expects).
 
 ## PDF and HTML viewer
 
@@ -136,6 +200,37 @@ HTML:
       message and an "Open in another app" button
 - [ ] Open an HTML attachment from Gmail and from WhatsApp
 
+## Phone checklist for 0.3.0
+
+Run these on the phone after installing the CI build (the first install with a new signing key needs one
+`adb uninstall com.najmulcodes.zapflick.debug`; after that `adb install -r` works).
+
+1. [ ] Open a `.pdf` and a `.html` from the Files app: ZapFlick is in "Open with" and both render. The
+       HTML page's script does nothing until *Enable scripts* is on.
+2. [ ] The bottom bar shows **Tab, Progress, Finished**. Open the tabs drawer, open and close 3 tabs, then
+       kill the app (`adb shell am force-stop com.najmulcodes.zapflick.debug`) and reopen it: the tabs are back.
+3. [ ] Add a favorite site, remove one, move one earlier or later (long-press a tile). *Recently used websites*
+       shows pages you visited only while that setting is on.
+4. [ ] On a page full of ads, *Block ads* reduces ads and pop-ups and the shield counter goes up.
+       Check that YouTube, Vimeo and TikTok still load and that the Download button still finds videos.
+5. [ ] Play a video fullscreen (tap the fullscreen button), rotate, press Back: it leaves fullscreen cleanly and the
+       bottom bar returns.
+6. [ ] Start a download, turn the screen off for 10 minutes: it keeps going. The Progress banner
+       "Improve download stability" disappears once the battery exemption is granted.
+7. [ ] Turn on **Wi-Fi only**, switch Wi-Fi off (mobile data on): running downloads pause and Progress says it is
+       waiting for Wi-Fi. Switch Wi-Fi on: they resume. A download you paused yourself stays paused.
+8. [ ] Finished: long-press, select three items, delete: the files are gone from the Files app. The storage
+       bar at the bottom matches *Settings, Storage* on the phone.
+9. [ ] Select a file and tap the lock icon: first time you are asked to set a PIN. Move a file: it is gone from
+       the gallery and from Finished. Open the private folder (PIN required), play it, restore it, delete another.
+       Enter a wrong PIN three times: a 30-second lockout, and force-stopping the app does not reset it.
+       Leave the app 40 seconds and come back: the PIN is asked again. The recents preview of the PIN screen is blank.
+10. [ ] **Settings, yt-dlp, Update yt-dlp** shows the new version, and a download still works afterwards.
+11. [ ] Settings: change the download location to a folder, download something, confirm it is in that folder;
+        turn **Sync to gallery** off, download again: the file is not in the gallery and plays in the app.
+12. [ ] *Default quality* set to a fixed value skips the quality sheet. *Downloads at once* of 1 starts one at a time.
+13. [ ] Rotate each screen (Tab, Progress, Finished, Settings, PIN) and check dark and light themes.
+
 ## Requirements
 
 - JDK 17 and the Android SDK (platform 35, build-tools 35.0.0). Android Studio is optional
@@ -200,16 +295,14 @@ keep rule first.
 
 ## Updating yt-dlp
 
-Sites change often, and downloads break when yt-dlp falls behind.
-
-- **Now:** bump `youtubedl` in `gradle/libs.versions.toml` to the newest release of
-  `io.github.junkfood02.youtubedl-android`, then rebuild and reinstall.
-- **Phase 3:** a Settings button will update yt-dlp in place (stable or nightly channel) and show the
-  current version, with no reinstall.
+Sites change often, and downloads break when yt-dlp falls behind. **Settings, yt-dlp, Update yt-dlp**
+updates it in place (stable or nightly channel) and shows the new version; no reinstall is needed. To
+change the bundled version, bump `youtubedl` in `gradle/libs.versions.toml`.
 
 ## Storage
 
-Files go through MediaStore, so the app needs no storage permission. On Android 8-9 (API 26-28),
+By default files go through MediaStore, so the app needs no storage permission (see Settings for the
+chosen-folder and app-storage options). On Android 8-9 (API 26-28),
 MediaStore writes need a legacy permission, so downloads there are saved to the app's own folder
 (`Android/data/com.najmulcodes.zapflick/files/Movies`) instead.
 
@@ -217,7 +310,7 @@ MediaStore writes need a legacy permission, so downloads there are saved to the 
 
 `DownloadQueueManager` owns the queue. Room is the source of truth for every item's state
 (`QUEUED`, `RUNNING`, `PAUSED`, `COMPLETED`, `FAILED`, `CANCELLED`); the manager owns the coroutines
-that move items between states, and runs at most two at once (`QueueConfig`). Live progress is kept
+that move items between states, and runs as many at once as Settings allows (`QueueConfig`, 1 to 4, default 2). Live progress is kept
 in memory only. `DownloadService` is a thin foreground service: it mirrors the queue into a
 notification and stops itself when nothing is queued or running.
 
@@ -229,10 +322,23 @@ on other failures, and after a successful save.
 
 ```
 app/src/main/java/com/najmulcodes/zapflick/
-  domain/   models, use cases, the queue (DownloadQueueManager) and the interfaces it depends on
-  data/     YoutubeDlEngine (the only file that touches the library), option, error and format
-            parsing, Room database, MediaStore saver, PDF session (PdfRenderer)
+  domain/   models, use cases, the queue (DownloadQueueManager) and the interfaces it depends on;
+            pure logic for settings, tabs, ad-block matching, selection, PIN and the viewers
+  data/     YoutubeDlEngine (the only file that touches the library, including the yt-dlp updater),
+            Room database and migrations, savers (MediaStore, chosen folder, app storage), DataStore
+            settings and PIN store, network monitor, ad blocker, PDF session (PdfRenderer)
   service/  DownloadService, notifications, the Android side of the queue
-  ui/       theme, navigation, Home and Downloads screens, components, viewer (ViewerActivity)
+  ui/       theme, navigation (Tab, Progress, Finished), browser, settings, progress, finished, security
+            (PIN and private folder), player, background setup, viewer (ViewerActivity)
   di/       Hilt bindings
 ```
+
+## Tests and CI
+
+`./gradlew testDebugUnitTest` runs the unit tests: pure logic only (settings, Wi-Fi policy, tabs, host
+blocklist, PIN hashing and lockout, selection, storage, charset detection, link policy, the queue and
+its Wi-Fi gate, library use cases, migration SQL). The GitHub Actions workflow builds the debug APK
+first and uploads it, then runs the tests, so a failing test never blocks installing a build.
+
+`app/debug.keystore` is committed (a debug key is not a secret) and used for debug builds, so every CI
+APK has the same signature and `adb install -r` can update the previous one.

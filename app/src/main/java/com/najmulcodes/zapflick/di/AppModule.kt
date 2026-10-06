@@ -1,10 +1,20 @@
 package com.najmulcodes.zapflick.di
 
 import com.najmulcodes.zapflick.data.repository.FilesDirWorkDirs
-import com.najmulcodes.zapflick.data.repository.MediaStoreSaver
+import com.najmulcodes.zapflick.data.network.SettingsQueueConfig
+import com.najmulcodes.zapflick.data.repository.AndroidMediaFiles
+import com.najmulcodes.zapflick.data.repository.SettingsAwareMediaSaver
+import com.najmulcodes.zapflick.data.security.DataStorePinStore
+import com.najmulcodes.zapflick.data.settings.DataStoreSettingsRepository
 import com.najmulcodes.zapflick.data.repository.RoomDownloadRepository
 import com.najmulcodes.zapflick.data.ytdlp.YoutubeDlEngine
 import com.najmulcodes.zapflick.domain.engine.DownloadEngine
+import com.najmulcodes.zapflick.domain.engine.YtDlpUpdater
+import com.najmulcodes.zapflick.domain.queue.QueueConfig
+import com.najmulcodes.zapflick.domain.repository.MediaFiles
+import com.najmulcodes.zapflick.domain.repository.PrivateItemsStore
+import com.najmulcodes.zapflick.domain.security.PinStore
+import com.najmulcodes.zapflick.domain.settings.SettingsRepository
 import com.najmulcodes.zapflick.domain.queue.DownloadQueue
 import com.najmulcodes.zapflick.domain.queue.DownloadQueueManager
 import com.najmulcodes.zapflick.domain.queue.QueueHost
@@ -30,7 +40,26 @@ abstract class AppModule {
     abstract fun bindDownloadQueue(impl: DownloadQueueManager): DownloadQueue
 
     @Binds
-    abstract fun bindMediaSaver(impl: MediaStoreSaver): MediaSaver
+    abstract fun bindYtDlpUpdater(impl: YoutubeDlEngine): YtDlpUpdater
+
+    // Where a finished file goes depends on Settings: gallery, a chosen folder, or app storage.
+    @Binds
+    abstract fun bindMediaSaver(impl: SettingsAwareMediaSaver): MediaSaver
+
+    @Binds
+    abstract fun bindMediaFiles(impl: AndroidMediaFiles): MediaFiles
+
+    @Binds
+    abstract fun bindPrivateItemsStore(impl: RoomDownloadRepository): PrivateItemsStore
+
+    @Binds
+    abstract fun bindSettingsRepository(impl: DataStoreSettingsRepository): SettingsRepository
+
+    @Binds
+    abstract fun bindQueueConfig(impl: SettingsQueueConfig): QueueConfig
+
+    @Binds
+    abstract fun bindPinStore(impl: DataStorePinStore): PinStore
 
     @Binds
     abstract fun bindQueueHost(impl: AndroidQueueHost): QueueHost

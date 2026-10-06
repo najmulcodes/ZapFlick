@@ -24,7 +24,6 @@ import com.najmulcodes.zapflick.R
 import com.najmulcodes.zapflick.domain.model.FormatSelection
 import com.najmulcodes.zapflick.domain.model.QualityOptions
 import com.najmulcodes.zapflick.domain.util.formatBytes
-import com.najmulcodes.zapflick.ui.home.FormatsState
 import com.najmulcodes.zapflick.ui.util.label
 
 @OptIn(ExperimentalMaterial3Api::class)

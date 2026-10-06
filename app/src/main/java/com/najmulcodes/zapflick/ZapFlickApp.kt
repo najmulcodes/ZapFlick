@@ -2,10 +2,12 @@ package com.najmulcodes.zapflick
 
 import android.app.Application
 import android.util.Log
+import com.najmulcodes.zapflick.data.network.WifiOnlyController
 import com.najmulcodes.zapflick.domain.engine.DownloadEngine
 import com.najmulcodes.zapflick.domain.model.DownloadException
 import com.najmulcodes.zapflick.domain.queue.DownloadQueue
 import com.najmulcodes.zapflick.service.DownloadNotifier
+import com.najmulcodes.zapflick.ui.security.PrivateSession
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -20,12 +22,17 @@ class ZapFlickApp : Application() {
     @Inject lateinit var notifier: DownloadNotifier
     @Inject lateinit var engine: DownloadEngine
     @Inject lateinit var queue: DownloadQueue
+    @Inject lateinit var wifiOnlyController: WifiOnlyController
+    @Inject lateinit var privateSession: PrivateSession
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate() {
         super.onCreate()
         notifier.ensureChannel()
+        // Holds downloads back on mobile data when Wi-Fi only is on, and locks the private folder after 30 s away.
+        wifiOnlyController.start()
+        privateSession.start()
         // Unpacking python/yt-dlp takes a few seconds on first launch; do it off the main thread.
         appScope.launch {
             try {

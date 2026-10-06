@@ -14,6 +14,8 @@ data class DownloadItem(
     val saved: SavedMedia?,
     val createdAt: Long,
     val updatedAt: Long,
+    /** Moved into the private folder: hidden from the gallery and from the Finished list. */
+    val isPrivate: Boolean = false,
 ) {
     fun toRequest(): DownloadRequest = DownloadRequest(url = url, title = title, selection = selection)
 }

@@ -22,4 +22,5 @@ data class DownloadEntity(
     @ColumnInfo(name = "saved_location") val savedLocation: String?,
     @ColumnInfo(name = "created_at") val createdAt: Long,
     @ColumnInfo(name = "updated_at") val updatedAt: Long,
+    @ColumnInfo(name = "is_private", defaultValue = "0") val isPrivate: Boolean = false,
 )

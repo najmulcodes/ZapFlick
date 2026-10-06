@@ -1,34 +1,24 @@
 package com.najmulcodes.zapflick.ui.downloads
 
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -37,142 +27,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.najmulcodes.zapflick.R
 import com.najmulcodes.zapflick.domain.model.DownloadRow
 import com.najmulcodes.zapflick.domain.model.DownloadStatus
 import com.najmulcodes.zapflick.domain.model.SavedMedia
-import com.najmulcodes.zapflick.ui.util.canOpen
 import com.najmulcodes.zapflick.ui.util.displayMessage
 import com.najmulcodes.zapflick.ui.util.label
 import com.najmulcodes.zapflick.ui.util.openMedia
 import com.najmulcodes.zapflick.ui.util.summary
-import coil.compose.AsyncImage
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** One download as a card with its progress and actions. Shared by the Progress and Private screens. */
 @Composable
-fun DownloadsScreen(
-    onBack: () -> Unit,
-    viewModel: DownloadsViewModel = hiltViewModel(),
-) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.downloads_title)) },
-                navigationIcon = {
-                    TextButton(onClick = onBack) { Text(stringResource(R.string.action_back)) }
-                },
-            )
-        },
-    ) { padding ->
-        when (val current = state) {
-            DownloadsUiState.Loading -> Box(
-                modifier = Modifier
-                    .padding(padding)
-                    .fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) { CircularProgressIndicator() }
-
-            is DownloadsUiState.Content -> if (current.rows.isEmpty()) {
-                EmptyDownloads(modifier = Modifier.padding(padding))
-            } else {
-                DownloadList(
-                    rows = current.rows,
-                    onPause = viewModel::pause,
-                    onResume = viewModel::resume,
-                    onCancel = viewModel::cancel,
-                    onRemove = viewModel::remove,
-                    onPauseAll = viewModel::pauseAll,
-                    onClearFinished = viewModel::clearFinished,
-                    onOpen = { media ->
-                        if (!openMedia(context, media)) {
-                            Toast.makeText(context, R.string.toast_cannot_open, Toast.LENGTH_SHORT).show()
-                        }
-                    },
-                    modifier = Modifier.padding(padding),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun EmptyDownloads(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
-    ) {
-        Text(
-            text = stringResource(R.string.downloads_empty_title),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Text(
-            text = stringResource(R.string.downloads_empty_body),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-    }
-}
-
-@Composable
-private fun DownloadList(
-    rows: List<DownloadRow>,
-    onPause: (Long) -> Unit,
-    onResume: (Long) -> Unit,
-    onCancel: (Long) -> Unit,
-    onRemove: (Long) -> Unit,
-    onPauseAll: () -> Unit,
-    onClearFinished: () -> Unit,
-    onOpen: (SavedMedia) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val hasActive = rows.any { it.item.status.isActive }
-    val hasFinished = rows.any { it.item.status.isFinished }
-
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        if (hasActive || hasFinished) {
-            item(key = "bulk-actions") {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    if (hasActive) {
-                        OutlinedButton(onClick = onPauseAll, modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.action_pause_all))
-                        }
-                    }
-                    if (hasFinished) {
-                        OutlinedButton(onClick = onClearFinished, modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.action_clear_finished))
-                        }
-                    }
-                }
-            }
-        }
-        items(rows, key = { it.item.id }) { row ->
-            DownloadCard(
-                row = row,
-                onPause = { onPause(row.item.id) },
-                onResume = { onResume(row.item.id) },
-                onCancel = { onCancel(row.item.id) },
-                onRemove = { onRemove(row.item.id) },
-                onOpen = onOpen,
-            )
-        }
-    }
-}
-
-@Composable
-private fun DownloadCard(
+internal fun DownloadCard(
     row: DownloadRow,
     onPause: () -> Unit,
     onResume: () -> Unit,
@@ -265,7 +132,7 @@ private fun DownloadCard(
                         TextButton(onClick = onCancel) { Text(stringResource(R.string.action_cancel)) }
                     }
                     DownloadStatus.COMPLETED -> {
-                        item.saved?.takeIf { it.canOpen() }?.let { media ->
+                        item.saved?.let { media ->
                             TextButton(onClick = { onOpen(media) }) { Text(stringResource(R.string.action_open)) }
                         }
                         TextButton(onClick = onRemove) { Text(stringResource(R.string.action_remove)) }

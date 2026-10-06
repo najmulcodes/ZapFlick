@@ -2,7 +2,15 @@ package com.najmulcodes.zapflick.ui.browser
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.najmulcodes.zapflick.data.browser.AdBlocker
+import com.najmulcodes.zapflick.data.browser.FavoritesRepository
+import com.najmulcodes.zapflick.data.browser.HistoryRepository
+import com.najmulcodes.zapflick.domain.browser.BrowserInput
 import com.najmulcodes.zapflick.domain.browser.DetectedMedia
+import com.najmulcodes.zapflick.domain.browser.FavoriteSite
+import com.najmulcodes.zapflick.domain.browser.HistoryEntry
+import com.najmulcodes.zapflick.domain.browser.RecentSites
+import com.najmulcodes.zapflick.domain.browser.TabList
 import com.najmulcodes.zapflick.domain.browser.MediaKind
 import com.najmulcodes.zapflick.domain.browser.MediaSniffer
 import com.najmulcodes.zapflick.domain.browser.RequestSession
@@ -13,12 +21,16 @@ import com.najmulcodes.zapflick.domain.model.FormatSelection
 import com.najmulcodes.zapflick.domain.model.VideoMetadata
 import com.najmulcodes.zapflick.domain.model.toDownloadError
 import com.najmulcodes.zapflick.domain.queue.DownloadQueue
+import com.najmulcodes.zapflick.domain.settings.AppSettings
+import com.najmulcodes.zapflick.domain.settings.SettingsRepository
+import com.najmulcodes.zapflick.domain.usecase.ExtractUrlUseCase
 import com.najmulcodes.zapflick.domain.usecase.FetchFormatsUseCase
 import com.najmulcodes.zapflick.domain.usecase.FetchMetadataUseCase
 import com.najmulcodes.zapflick.domain.usecase.StartDownloadUseCase
-import com.najmulcodes.zapflick.ui.home.FormatsState
+import com.najmulcodes.zapflick.ui.components.FormatsState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -26,6 +38,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -51,16 +65,58 @@ sealed interface DownloadPanel {
 sealed interface BrowserEvent {
     data class Queued(val title: String) : BrowserEvent
     data object QueueFailed : BrowserEvent
+    data object TabLimitReached : BrowserEvent
+    data object NoLinkInShare : BrowserEvent
+    data object FavoriteAdded : BrowserEvent
+    data object FavoriteRejected : BrowserEvent
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class BrowserViewModel @Inject constructor(
     private val fetchMetadata: FetchMetadataUseCase,
     private val fetchFormats: FetchFormatsUseCase,
     private val startDownload: StartDownloadUseCase,
     private val sessions: RequestSessions,
+    private val tabManager: TabManager,
+    private val settingsRepository: SettingsRepository,
+    private val favoritesRepository: FavoritesRepository,
+    private val historyRepository: HistoryRepository,
+    private val extractUrl: ExtractUrlUseCase,
+    val adBlocker: AdBlocker,
     queue: DownloadQueue,
 ) : ViewModel() {
+
+    val tabs: StateFlow<TabList> = tabManager.state
+
+    val settings: StateFlow<AppSettings> = settingsRepository.settings
+
+    val favorites: StateFlow<List<FavoriteSite>> = favoritesRepository.favorites
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
+    /** The "Recently used websites" row: empty while the setting is off, and nothing is recorded then either. */
+    val recentSites: StateFlow<List<HistoryEntry>> = settingsRepository.settings
+        .map { it.recentSites }
+        .distinctUntilChanged()
+        .flatMapLatest { enabled ->
+            if (enabled) historyRepository.recent(RECENT_FETCH).map { RecentSites.pick(it) } else flowOf(emptyList())
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
+    private val _blockedCount = MutableStateFlow(0)
+    val blockedCount: StateFlow<Int> = _blockedCount.asStateFlow()
+
+    private val _desktopSite = MutableStateFlow(false)
+    val desktopSite: StateFlow<Boolean> = _desktopSite.asStateFlow()
+
+    /** A shared link whose download sheet should open as soon as its page has started loading. */
+    private val _autoPrepare = MutableStateFlow<String?>(null)
+    val autoPrepare: StateFlow<String?> = _autoPrepare.asStateFlow()
+
+    init {
+        viewModelScope.launch { favoritesRepository.ensureSeeded() }
+        viewModelScope.launch { adBlocker.preload() }
+    }
 
     /** The page being shown. Kept here so coming back from another screen reopens the same page. */
     private val _pageUrl = MutableStateFlow("")
@@ -88,13 +144,105 @@ class BrowserViewModel @Inject constructor(
 
     /** A new top-level page started loading: whatever was spotted on the last page no longer applies. */
     fun onPageStarted(url: String) {
-        if (url != _pageUrl.value) _detected.value = emptyList()
+        if (isInternalUrl(url)) return
+        if (url != _pageUrl.value) {
+            _detected.value = emptyList()
+            _blockedCount.value = 0
+        }
         _pageUrl.value = url
+        tabManager.update(tabManager.state.value.activeId, url = url)
     }
 
     /** In-page navigation (single-page apps) keeps the spotted files. */
     fun onUrlChanged(url: String) {
+        if (isInternalUrl(url)) return
         _pageUrl.value = url
+        tabManager.update(tabManager.state.value.activeId, url = url)
+    }
+
+    fun onTitleChanged(title: String) {
+        if (title.isNotBlank()) tabManager.update(tabManager.state.value.activeId, title = title)
+    }
+
+    /** A page finished loading: remember it in the history, unless that is switched off. */
+    fun onPageFinished(url: String, title: String?) {
+        if (!settingsRepository.settings.value.recentSites) return
+        viewModelScope.launch { historyRepository.record(url, title) }
+    }
+
+    fun onAdBlocked() {
+        _blockedCount.update { it + 1 }
+    }
+
+    fun setDesktopSite(enabled: Boolean) {
+        _desktopSite.value = enabled
+    }
+
+    /** Where the address bar text should go, using the chosen search engine. */
+    fun resolveAddress(text: String): String? =
+        BrowserInput.resolve(text, settingsRepository.settings.value.searchEngine)
+
+    /** Shows a page in the current tab right away (the WebView is told to load it by the screen). */
+    fun navigatingTo(url: String) {
+        tabManager.update(tabManager.state.value.activeId, url = url)
+        _pageUrl.value = url
+        _detected.value = emptyList()
+        _blockedCount.value = 0
+    }
+
+    fun selectTab(id: Long) = tabManager.select(id)
+
+    fun closeTab(id: Long) = tabManager.close(id)
+
+    fun closeAllTabs() = tabManager.closeAll()
+
+    fun newTab(url: String = "") {
+        if (!tabManager.openNewTab(url)) _events.trySend(BrowserEvent.TabLimitReached)
+    }
+
+    /** Lets the screen keep a tab's page state (history, scroll) while another tab is on screen. */
+    fun pageStateOf(id: Long) = tabManager.pageState(id)
+
+    fun savePageState(id: Long, bundle: android.os.Bundle) = tabManager.putPageState(id, bundle)
+
+    /** A link shared into ZapFlick: open it in a new tab and offer to download it. */
+    fun onSharedText(text: String) {
+        val url = extractUrl(text)
+        if (url == null) {
+            _events.trySend(BrowserEvent.NoLinkInShare)
+            return
+        }
+        if (!tabManager.openNewTab(url)) {
+            // All 20 tabs are open: reuse the current one rather than refuse the link.
+            tabManager.update(tabManager.state.value.activeId, url = url)
+        }
+        _pageUrl.value = url
+        _detected.value = emptyList()
+        _autoPrepare.value = url
+    }
+
+    fun onAutoPrepareConsumed() {
+        _autoPrepare.value = null
+    }
+
+    fun addFavorite(title: String, address: String) {
+        viewModelScope.launch {
+            val added = favoritesRepository.add(title, address)
+            _events.send(if (added) BrowserEvent.FavoriteAdded else BrowserEvent.FavoriteRejected)
+        }
+    }
+
+    fun removeFavorite(id: Long) {
+        viewModelScope.launch { favoritesRepository.remove(id) }
+    }
+
+    fun moveFavorite(id: Long, delta: Int) {
+        viewModelScope.launch { favoritesRepository.move(id, delta) }
+    }
+
+    private fun isInternalUrl(url: String): Boolean {
+        val lower = url.lowercase()
+        return lower.startsWith("about:") || lower.startsWith("data:")
     }
 
     /** Called from the WebView's network thread for every request the page makes. */
@@ -139,8 +287,15 @@ class BrowserViewModel @Inject constructor(
         prepareJob = viewModelScope.launch {
             fetchMetadata(url).fold(
                 onSuccess = { metadata ->
-                    _panel.value = DownloadPanel.Quality(metadata, FormatsState.Loading)
-                    loadFormats(metadata.sourceUrl)
+                    val preset = settingsRepository.settings.value.defaultSelection()
+                    if (preset != null) {
+                        // A default quality is set in Settings: no sheet, straight to the queue.
+                        _panel.value = DownloadPanel.Quality(metadata, FormatsState.Loading)
+                        onQualitySelected(preset)
+                    } else {
+                        _panel.value = DownloadPanel.Quality(metadata, FormatsState.Loading)
+                        loadFormats(metadata.sourceUrl)
+                    }
                 },
                 onFailure = { _panel.value = DownloadPanel.Failed(it.toDownloadError()) },
             )
@@ -206,6 +361,7 @@ class BrowserViewModel @Inject constructor(
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L
         const val MAX_DETECTED = 30
+        const val RECENT_FETCH = 60
         val BLOCKED_SESSION_SITES = listOf("youtube.com", "youtu.be", "google.com", "googlevideo.com")
     }
 }

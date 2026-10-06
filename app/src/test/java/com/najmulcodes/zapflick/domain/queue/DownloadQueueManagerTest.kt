@@ -170,7 +170,11 @@ class DownloadQueueManagerTest {
         }
     }
 
-    private class Harness(scope: CoroutineScope, maxConcurrent: Int = 2) {
+    private class Harness(
+        scope: CoroutineScope,
+        maxConcurrent: Int = 2,
+        config: QueueConfig = QueueConfig(maxConcurrent),
+    ) {
         val repo = FakeRepository()
         val engine = FakeEngine()
         val dirs = FakeWorkDirs()
@@ -181,9 +185,52 @@ class DownloadQueueManagerTest {
             mediaSaver = FakeSaver(),
             workDirs = dirs,
             host = host,
-            config = QueueConfig(maxConcurrent),
+            config = config,
             scope = scope,
         )
+    }
+
+    /** A config the test can change while the queue runs, like Settings and the Wi-Fi gate do. */
+    private class MutableConfig(
+        override var maxConcurrent: Int,
+        override var canStart: Boolean = true,
+    ) : QueueConfig
+
+    @Test
+    fun `nothing starts while the gate is closed, and waiting downloads start when it opens`() = runTest {
+        val config = MutableConfig(maxConcurrent = 2, canStart = false)
+        val h = Harness(backgroundScope, config = config)
+        h.manager.enqueue(meta(1), FormatSelection.Best)
+        h.manager.enqueue(meta(2), FormatSelection.Best)
+        runCurrent()
+        assertEquals(emptyList<String>(), h.engine.started)
+
+        config.canStart = true
+        h.manager.refill()
+        runCurrent()
+        assertEquals(listOf("u1", "u2"), h.engine.started)
+    }
+
+    @Test
+    fun `a higher limit starts waiting downloads when the queue is refilled`() = runTest {
+        val config = MutableConfig(maxConcurrent = 1)
+        val h = Harness(backgroundScope, config = config)
+        repeat(3) { h.manager.enqueue(meta(it + 1), FormatSelection.Best) }
+        runCurrent()
+        assertEquals(listOf("u1"), h.engine.started)
+
+        config.maxConcurrent = 3
+        h.manager.refill()
+        runCurrent()
+        assertEquals(listOf("u1", "u2", "u3"), h.engine.started)
+    }
+
+    @Test
+    fun `refill with nothing waiting changes nothing`() = runTest {
+        val h = Harness(backgroundScope)
+        h.manager.refill()
+        runCurrent()
+        assertEquals(emptyList<String>(), h.engine.started)
     }
 
     private fun meta(n: Int) = VideoMetadata(

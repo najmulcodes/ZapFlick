@@ -23,3 +23,17 @@
 # Crash reports stay readable.
 -keepattributes SourceFile, LineNumberTable
 -renamesourcefileattribute SourceFile
+
+# --- Settings and enums stored by name ---
+# DataStore keeps enum names (ThemeMode, SearchEngine, FilenameStyle, YtDlpChannel) as text, and
+# the Wi-Fi gate and PIN code read them back with enumValues(), so keep them readable.
+-keepclassmembers enum com.najmulcodes.zapflick.domain.settings.** { *; }
+
+# --- Room ---
+# Entities, DAOs and the migrations are referenced by Room's generated code; the Room and
+# Hilt consumer rules cover the rest. Migrations must stay: removing one would wipe history on upgrade.
+-keep class com.najmulcodes.zapflick.data.db.Migrations { *; }
+
+# --- Media3 (private folder player), Biometric, DataStore, WebView ---
+# These libraries ship their own consumer rules. ZapFlick adds no JavaScript interfaces to any
+# WebView, so there is nothing to keep for them.

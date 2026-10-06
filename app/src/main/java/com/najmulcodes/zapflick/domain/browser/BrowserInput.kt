@@ -1,13 +1,13 @@
 package com.najmulcodes.zapflick.domain.browser
 
+import com.najmulcodes.zapflick.domain.settings.SearchEngine
 import java.net.URLEncoder
 
 /** Turns whatever was typed in the address bar into a URL to load. */
 object BrowserInput {
     const val HOME_URL = "https://www.google.com"
-    private const val SEARCH_URL = "https://www.google.com/search?q="
 
-    fun resolve(raw: String): String? {
+    fun resolve(raw: String, engine: SearchEngine = SearchEngine.GOOGLE): String? {
         val text = raw.trim()
         if (text.isEmpty()) return null
         val lower = text.lowercase()
@@ -16,7 +16,7 @@ object BrowserInput {
         return if (looksLikeAddress) {
             "https://$text"
         } else {
-            SEARCH_URL + URLEncoder.encode(text, "UTF-8")
+            engine.queryUrl + URLEncoder.encode(text, "UTF-8")
         }
     }
 }

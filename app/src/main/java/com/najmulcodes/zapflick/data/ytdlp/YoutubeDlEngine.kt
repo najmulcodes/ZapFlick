@@ -3,12 +3,16 @@ package com.najmulcodes.zapflick.data.ytdlp
 import android.content.Context
 import com.najmulcodes.zapflick.domain.browser.RequestSessions
 import com.najmulcodes.zapflick.domain.engine.DownloadEngine
+import com.najmulcodes.zapflick.domain.engine.YtDlpUpdate
+import com.najmulcodes.zapflick.domain.engine.YtDlpUpdater
 import com.najmulcodes.zapflick.domain.model.AvailableFormats
 import com.najmulcodes.zapflick.domain.model.DownloadError
 import com.najmulcodes.zapflick.domain.model.DownloadException
 import com.najmulcodes.zapflick.domain.model.DownloadProgress
 import com.najmulcodes.zapflick.domain.model.DownloadRequest
 import com.najmulcodes.zapflick.domain.model.VideoMetadata
+import com.najmulcodes.zapflick.domain.settings.SettingsRepository
+import com.najmulcodes.zapflick.domain.settings.YtDlpChannel
 import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
@@ -36,7 +40,8 @@ import javax.inject.Singleton
 class YoutubeDlEngine @Inject constructor(
     @ApplicationContext private val context: Context,
     private val sessions: RequestSessions,
-) : DownloadEngine {
+    private val settings: SettingsRepository,
+) : DownloadEngine, YtDlpUpdater {
 
     private val initMutex = Mutex()
 
@@ -58,6 +63,36 @@ class YoutubeDlEngine @Inject constructor(
             }
         }
     }
+
+    override suspend fun currentVersion(): String? = withContext(Dispatchers.IO) {
+        try {
+            initialize()
+            YoutubeDL.getInstance().version(context)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    override suspend fun update(channel: YtDlpChannel): Result<YtDlpUpdate> =
+        withContext(Dispatchers.IO) {
+            guarded {
+                initialize()
+                val library = YoutubeDL.getInstance()
+                val libraryChannel = when (channel) {
+                    YtDlpChannel.STABLE -> YoutubeDL.UpdateChannel.STABLE
+                    YtDlpChannel.NIGHTLY -> YoutubeDL.UpdateChannel.NIGHTLY
+                }
+                val status = library.updateYoutubeDL(context, libraryChannel)
+                val version = library.version(context)
+                if (status == YoutubeDL.UpdateStatus.ALREADY_UP_TO_DATE) {
+                    YtDlpUpdate.AlreadyLatest(version)
+                } else {
+                    YtDlpUpdate.Updated(version)
+                }
+            }
+        }
 
     override suspend fun fetchMetadata(url: String): Result<VideoMetadata> =
         withContext(Dispatchers.IO) {
@@ -102,7 +137,11 @@ class YoutubeDlEngine @Inject constructor(
         initialize()
         val processId = UUID.randomUUID().toString()
         val ytRequest = YoutubeDLRequest(request.url).apply {
-            YtDlpOptions.forDownload(request.selection, workDir.absolutePath).forEach { option ->
+            YtDlpOptions.forDownload(
+                request.selection,
+                workDir.absolutePath,
+                settings.settings.value.filenameStyle.template,
+            ).forEach { option ->
                 val value = option.value
                 if (value == null) addOption(option.name) else addOption(option.name, value)
             }
