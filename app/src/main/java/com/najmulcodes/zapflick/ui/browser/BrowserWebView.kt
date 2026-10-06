@@ -56,6 +56,10 @@ fun mobileUserAgent(webView: WebView): String = UserAgents.withoutWebViewMarker(
 
 @SuppressLint("SetJavaScriptEnabled")
 fun createBrowserWebView(context: Context, callbacks: BrowserCallbacks): WebView = WebView(context).apply {
+    // Debug builds only: lets a computer inspect pages (chrome://inspect or the DevTools port) to find layout bugs.
+    if ((context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+        WebView.setWebContentsDebuggingEnabled(true)
+    }
     settings.javaScriptEnabled = true
     settings.domStorageEnabled = true
     settings.allowFileAccess = false
