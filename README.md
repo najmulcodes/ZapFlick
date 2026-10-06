@@ -342,3 +342,5 @@ first and uploads it, then runs the tests, so a failing test never blocks instal
 
 `app/debug.keystore` is committed (a debug key is not a secret) and used for debug builds, so every CI
 APK has the same signature and `adb install -r` can update the previous one.
+
+> Developer and AI handoff: see [docs/HANDOFF.md](docs/HANDOFF.md).
