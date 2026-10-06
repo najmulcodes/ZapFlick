@@ -111,6 +111,10 @@ fun TabScreen(
     onOpenProgress: () -> Unit,
     onFullscreenChange: (Boolean) -> Unit,
     onTypingChange: (Boolean) -> Unit,
+    homeRequested: Boolean,
+    browseRequested: Boolean,
+    onNavRequestHandled: () -> Unit,
+    onStartPageChange: (Boolean) -> Unit,
     viewModel: BrowserViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -260,6 +264,28 @@ fun TabScreen(
             onShareConsumed()
         }
     }
+    // Bottom-bar Home: show the start page, reusing an empty tab before opening another.
+    LaunchedEffect(homeRequested) {
+        if (homeRequested) {
+            val state = viewModel.tabs.value
+            if (!state.active.isNewTabPage) {
+                val blank = state.tabs.firstOrNull { it.isNewTabPage }
+                if (blank != null) viewModel.selectTab(blank.id) else viewModel.newTab()
+            }
+            onNavRequestHandled()
+        }
+    }
+    // Bottom-bar Browse: from the start page, go back to the latest tab that has a page.
+    LaunchedEffect(browseRequested) {
+        if (browseRequested) {
+            val state = viewModel.tabs.value
+            if (state.active.isNewTabPage) {
+                state.tabs.lastOrNull { !it.isNewTabPage }?.let { viewModel.selectTab(it.id) }
+            }
+            onNavRequestHandled()
+        }
+    }
+    LaunchedEffect(activeTab.isNewTabPage) { onStartPageChange(activeTab.isNewTabPage) }
     LaunchedEffect(autoPrepare) {
         autoPrepare?.let { url ->
             startPrepare(url, true, null)

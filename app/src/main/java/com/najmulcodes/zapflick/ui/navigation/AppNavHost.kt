@@ -52,13 +52,15 @@ object Routes {
     fun player(id: Long) = "player/$id"
 }
 
-private data class TopLevel(val route: String, val label: Int, @DrawableRes val icon: Int)
+/** The four bottom-bar buttons. Browse and Home both live on the Tab route; the active tab decides which is lit. */
+private enum class BarItem(val label: Int, @DrawableRes val icon: Int) {
+    BROWSE(R.string.nav_tab, R.drawable.ic_nav_browse),
+    HOME(R.string.nav_home, R.drawable.ic_nav_home),
+    DOWNLOADS(R.string.nav_progress, R.drawable.ic_nav_downloads),
+    LIBRARY(R.string.nav_finished, R.drawable.ic_nav_library),
+}
 
-private val TOP_LEVEL = listOf(
-    TopLevel(Routes.TAB, R.string.nav_tab, R.drawable.ic_nav_browse),
-    TopLevel(Routes.PROGRESS, R.string.nav_progress, R.drawable.ic_nav_downloads),
-    TopLevel(Routes.FINISHED, R.string.nav_finished, R.drawable.ic_nav_library),
-)
+private val BAR_ROUTES = setOf(Routes.TAB, Routes.PROGRESS, Routes.FINISHED)
 
 /** Opens a bottom-bar destination, keeping its own back stack so returning to it restores where you were. */
 private fun NavHostController.switchTo(route: String) {
@@ -84,6 +86,9 @@ fun AppNavHost(
     val activeCount by barViewModel.activeCount.collectAsStateWithLifecycle()
     var fullscreenVideo by remember { mutableStateOf(false) }
     var typingAddress by remember { mutableStateOf(false) }
+    var onStartPage by remember { mutableStateOf(true) }
+    var homeRequested by remember { mutableStateOf(false) }
+    var browseRequested by remember { mutableStateOf(false) }
 
     // A shared link is handled by the Tab screen, so bring it back to the front.
     LaunchedEffect(incomingShare) {
@@ -99,22 +104,40 @@ fun AppNavHost(
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            AnimatedVisibility(visible = !fullscreenVideo && !typingAddress && TOP_LEVEL.any { it.route == current }) {
+            AnimatedVisibility(visible = !fullscreenVideo && !typingAddress && current in BAR_ROUTES) {
                 NavigationBar {
-                    TOP_LEVEL.forEach { destination ->
+                    BarItem.values().forEach { item ->
                         NavigationBarItem(
-                            selected = current == destination.route,
-                            onClick = { navController.switchTo(destination.route) },
-                            icon = {
-                                if (destination.route == Routes.PROGRESS && activeCount > 0) {
-                                    BadgedBox(badge = { Badge { Text(activeCount.toString()) } }) {
-                                        Icon(painterResource(destination.icon), contentDescription = null)
+                            selected = when (item) {
+                                BarItem.BROWSE -> current == Routes.TAB && !onStartPage
+                                BarItem.HOME -> current == Routes.TAB && onStartPage
+                                BarItem.DOWNLOADS -> current == Routes.PROGRESS
+                                BarItem.LIBRARY -> current == Routes.FINISHED
+                            },
+                            onClick = {
+                                when (item) {
+                                    BarItem.BROWSE -> {
+                                        browseRequested = true
+                                        navController.switchTo(Routes.TAB)
                                     }
-                                } else {
-                                    Icon(painterResource(destination.icon), contentDescription = null)
+                                    BarItem.HOME -> {
+                                        homeRequested = true
+                                        navController.switchTo(Routes.TAB)
+                                    }
+                                    BarItem.DOWNLOADS -> navController.switchTo(Routes.PROGRESS)
+                                    BarItem.LIBRARY -> navController.switchTo(Routes.FINISHED)
                                 }
                             },
-                            label = { Text(stringResource(destination.label)) },
+                            icon = {
+                                if (item == BarItem.DOWNLOADS && activeCount > 0) {
+                                    BadgedBox(badge = { Badge { Text(activeCount.toString()) } }) {
+                                        Icon(painterResource(item.icon), contentDescription = null)
+                                    }
+                                } else {
+                                    Icon(painterResource(item.icon), contentDescription = null)
+                                }
+                            },
+                            label = { Text(stringResource(item.label)) },
                         )
                     }
                 }
@@ -134,6 +157,13 @@ fun AppNavHost(
                     onOpenProgress = { navController.switchTo(Routes.PROGRESS) },
                     onFullscreenChange = { fullscreenVideo = it },
                     onTypingChange = { typingAddress = it },
+                    homeRequested = homeRequested,
+                    browseRequested = browseRequested,
+                    onNavRequestHandled = {
+                        homeRequested = false
+                        browseRequested = false
+                    },
+                    onStartPageChange = { onStartPage = it },
                 )
             }
             composable(Routes.PROGRESS) {

@@ -131,6 +131,7 @@
 
     <!-- App shell, settings, browser, library and private folder -->
     <string name="nav_tab">Browse</string>
+    <string name="nav_home">Home</string>
     <string name="nav_progress">Downloads</string>
     <string name="nav_finished">Library</string>
     <string name="progress_title">PROGRESS</string>
