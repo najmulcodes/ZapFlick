@@ -13,6 +13,15 @@ sealed interface DownloadError {
     data object InvalidUrl : DownloadError { override val code = "invalid_url" }
     data object StorageError : DownloadError { override val code = "storage" }
 
+    /** The site wants a login or an age confirmation. */
+    data object LoginRequired : DownloadError { override val code = "login_required" }
+
+    /** The site refused the request (HTTP 403 or 429). */
+    data object SiteBlocked : DownloadError { override val code = "site_blocked" }
+
+    /** The site changed and the bundled yt-dlp can no longer read it. Updating yt-dlp fixes this. */
+    data object OutdatedExtractor : DownloadError { override val code = "outdated_extractor" }
+
     data class Unknown(val detail: String? = null) : DownloadError {
         override val code = "unknown"
     }
@@ -26,6 +35,9 @@ sealed interface DownloadError {
             Cancelled.code -> Cancelled
             InvalidUrl.code -> InvalidUrl
             StorageError.code -> StorageError
+            LoginRequired.code -> LoginRequired
+            SiteBlocked.code -> SiteBlocked
+            OutdatedExtractor.code -> OutdatedExtractor
             else -> Unknown(detail)
         }
     }

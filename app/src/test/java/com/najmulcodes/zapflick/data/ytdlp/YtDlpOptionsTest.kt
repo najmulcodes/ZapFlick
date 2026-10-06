@@ -17,14 +17,14 @@ class YtDlpOptionsTest {
     fun `best selects best video plus audio and merges to mp4`() {
         val options = YtDlpOptions.formatOptions(FormatSelection.Best)
         assertEquals("bv*+ba/b", options.valueOf("-f"))
-        assertEquals("mp4", options.valueOf("--merge-output-format"))
+        assertEquals("mp4/mkv", options.valueOf("--merge-output-format"))
         assertNotNull(options.valueOf("-S"))
     }
 
     @Test
     fun `resolution caps the height on both the merged and the single-file branch`() {
         val options = YtDlpOptions.formatOptions(FormatSelection.Resolution(1080))
-        assertEquals("bv*[height<=1080]+ba/b[height<=1080]", options.valueOf("-f"))
+        assertEquals("bv*[height<=1080]+ba/b[height<=1080]/bv*+ba/b", options.valueOf("-f"))
     }
 
     @Test
@@ -33,6 +33,20 @@ class YtDlpOptionsTest {
             val format = YtDlpOptions.formatOptions(FormatSelection.Resolution(height)).valueOf("-f")
             assertTrue(format.orEmpty().contains("height<=$height"))
         }
+    }
+
+    @Test
+    fun `a resolution falls back to the best stream when the site reports no height`() {
+        val format = YtDlpOptions.formatOptions(FormatSelection.Resolution(720)).valueOf("-f").orEmpty()
+        assertTrue(format.endsWith("/bv*+ba/b"))
+    }
+
+    @Test
+    fun `downloads fetch pieces in parallel and wait out slow connections`() {
+        val options = YtDlpOptions.forDownload(FormatSelection.Best, "/data/work")
+        assertEquals("4", options.valueOf("--concurrent-fragments"))
+        assertEquals("30", options.valueOf("--socket-timeout"))
+        assertEquals("10", options.valueOf("--retries"))
     }
 
     @Test

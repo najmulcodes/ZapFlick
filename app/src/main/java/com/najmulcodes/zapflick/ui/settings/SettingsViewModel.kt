@@ -3,6 +3,8 @@ package com.najmulcodes.zapflick.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.najmulcodes.zapflick.data.browser.BrowserData
+import com.najmulcodes.zapflick.domain.engine.FailureEntry
+import com.najmulcodes.zapflick.domain.engine.FailureLog
 import com.najmulcodes.zapflick.domain.engine.YtDlpUpdate
 import com.najmulcodes.zapflick.domain.engine.YtDlpUpdater
 import com.najmulcodes.zapflick.domain.security.PinManager
@@ -53,7 +55,13 @@ class SettingsViewModel @Inject constructor(
     private val browserData: BrowserData,
     private val updater: YtDlpUpdater,
     private val pinManager: PinManager,
+    private val failureLog: FailureLog,
 ) : ViewModel() {
+
+    /** The last failures with yt-dlp's own words, so a broken site can be diagnosed instead of guessed at. */
+    val failures: StateFlow<List<FailureEntry>> = failureLog.entries
+
+    fun clearFailures() = failureLog.clear()
 
     private val version = MutableStateFlow<String?>(null)
     private val update = MutableStateFlow<YtDlpUpdateState>(YtDlpUpdateState.Idle)

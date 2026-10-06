@@ -13,6 +13,13 @@ object YtDlpOptions {
     // Highest resolution first; among equals prefer h264 + m4a so players are happy.
     private const val VIDEO_SORT = "res,vcodec:h264,acodec:m4a"
 
+    /** Slow or flaky connections are the norm on a phone: wait longer and retry before giving up. */
+    fun networkOptions(): List<YtDlpOption> = listOf(
+        YtDlpOption("--socket-timeout", "30"),
+        YtDlpOption("--retries", "10"),
+        YtDlpOption("--fragment-retries", "10"),
+    )
+
     fun forDownload(
         selection: FormatSelection,
         outputDir: String,
@@ -20,6 +27,9 @@ object YtDlpOptions {
     ): List<YtDlpOption> = buildList {
         add(YtDlpOption("--no-playlist"))
         add(YtDlpOption("--no-mtime"))
+        // Streams cut into many small pieces (HLS, DASH) download several pieces at once.
+        add(YtDlpOption("--concurrent-fragments", "4"))
+        addAll(networkOptions())
         add(YtDlpOption("-o", "$outputDir/$template"))
         addAll(formatOptions(selection))
     }
@@ -31,15 +41,18 @@ object YtDlpOptions {
     }
 
     private fun videoOptions(maxHeight: Int?): List<YtDlpOption> {
+        // The last alternatives drop the height limit: some sites do not report a height at all,
+        // and a filter on a missing value would make the whole download fail.
         val format = if (maxHeight == null) {
             "bv*+ba/b"
         } else {
-            "bv*[height<=$maxHeight]+ba/b[height<=$maxHeight]"
+            "bv*[height<=$maxHeight]+ba/b[height<=$maxHeight]/bv*+ba/b"
         }
         return listOf(
             YtDlpOption("-f", format),
             YtDlpOption("-S", VIDEO_SORT),
-            YtDlpOption("--merge-output-format", "mp4"),
+            // mp4 when the streams fit in it, mkv when they do not (VP9/Opus from some sites).
+            YtDlpOption("--merge-output-format", "mp4/mkv"),
         )
     }
 

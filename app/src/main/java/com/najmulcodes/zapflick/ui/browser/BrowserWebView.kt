@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.http.SslError
+import android.os.Handler
+import android.os.Looper
 import android.os.Message
 import android.view.View
 import android.webkit.CookieManager
@@ -18,6 +20,9 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import com.najmulcodes.zapflick.domain.browser.UserAgents
 import java.io.ByteArrayInputStream
+
+/** What a long-press landed on: a link, or a picture. */
+data class LinkHit(val url: String, val isImage: Boolean)
 
 private val ALLOWED_SCHEMES = setOf("http", "https", "about", "data", "blob")
 
@@ -38,6 +43,7 @@ class BrowserCallbacks(
     val onHideCustomView: () -> Unit,
     /** The page shown when a site cannot be loaded. */
     val errorPage: (failingUrl: String) -> String,
+    val onLongPress: (LinkHit) -> Unit = {},
 )
 
 private val EMPTY_BODY = ByteArray(0)
@@ -59,6 +65,13 @@ fun createBrowserWebView(context: Context, callbacks: BrowserCallbacks): WebView
     settings.setSupportMultipleWindows(true)
     settings.javaScriptCanOpenWindowsAutomatically = false
     settings.setGeolocationEnabled(false)
+    // Pinch to zoom: WebView only allows it with these two switched on, and a browser that cannot zoom feels fake.
+    settings.setSupportZoom(true)
+    settings.builtInZoomControls = true
+    settings.displayZoomControls = false
+    // Honour the page's viewport tag the way Chrome does; pages without one are laid out wide and zoomed out.
+    settings.useWideViewPort = true
+    isNestedScrollingEnabled = true
     settings.userAgentString = UserAgents.withoutWebViewMarker(settings.userAgentString)
     CookieManager.getInstance().setAcceptCookie(true)
     CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
@@ -167,4 +180,40 @@ fun createBrowserWebView(context: Context, callbacks: BrowserCallbacks): WebView
         }
     }
     setDownloadListener { url, _, _, _, _ -> callbacks.onDirectDownload(url) }
+
+    // Long-press on a link or a picture opens a small menu, as in every phone browser.
+    setOnLongClickListener {
+        val result = hitTestResult
+        val extra = result.extra
+        when (result.type) {
+            WebView.HitTestResult.SRC_ANCHOR_TYPE -> {
+                if (extra.isNullOrBlank()) {
+                    false
+                } else {
+                    callbacks.onLongPress(LinkHit(extra, isImage = false))
+                    true
+                }
+            }
+            WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE -> {
+                // For a linked picture, extra is the picture; the link behind it has to be asked for.
+                val reply = Handler(Looper.getMainLooper()) { message ->
+                    val link = message.data.getString("url")
+                    val target = link?.takeIf { it.isNotBlank() } ?: extra
+                    if (!target.isNullOrBlank()) callbacks.onLongPress(LinkHit(target, isImage = false))
+                    true
+                }
+                requestFocusNodeHref(reply.obtainMessage())
+                true
+            }
+            WebView.HitTestResult.IMAGE_TYPE -> {
+                if (extra.isNullOrBlank()) {
+                    false
+                } else {
+                    callbacks.onLongPress(LinkHit(extra, isImage = true))
+                    true
+                }
+            }
+            else -> false
+        }
+    }
 }

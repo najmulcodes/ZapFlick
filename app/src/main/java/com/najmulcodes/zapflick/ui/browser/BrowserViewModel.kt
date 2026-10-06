@@ -15,6 +15,9 @@ import com.najmulcodes.zapflick.domain.browser.MediaKind
 import com.najmulcodes.zapflick.domain.browser.MediaSniffer
 import com.najmulcodes.zapflick.domain.browser.RequestSession
 import com.najmulcodes.zapflick.domain.browser.RequestSessions
+import com.najmulcodes.zapflick.domain.engine.FailureEntry
+import com.najmulcodes.zapflick.domain.engine.FailureLog
+import com.najmulcodes.zapflick.domain.engine.YtDlpUpdater
 import com.najmulcodes.zapflick.domain.model.AvailableFormats
 import com.najmulcodes.zapflick.domain.model.DownloadError
 import com.najmulcodes.zapflick.domain.model.FormatSelection
@@ -84,8 +87,20 @@ class BrowserViewModel @Inject constructor(
     private val historyRepository: HistoryRepository,
     private val extractUrl: ExtractUrlUseCase,
     val adBlocker: AdBlocker,
+    failureLog: FailureLog,
+    private val updater: YtDlpUpdater,
     queue: DownloadQueue,
 ) : ViewModel() {
+
+    /** The last failures with the exact text yt-dlp printed, for the "Copy details" button. */
+    val failures: StateFlow<List<FailureEntry>> = failureLog.entries
+
+    private val _ytDlpVersion = MutableStateFlow<String?>(null)
+    val ytDlpVersion: StateFlow<String?> = _ytDlpVersion.asStateFlow()
+
+    init {
+        viewModelScope.launch { _ytDlpVersion.value = updater.currentVersion() }
+    }
 
     val tabs: StateFlow<TabList> = tabManager.state
 

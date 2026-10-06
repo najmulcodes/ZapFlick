@@ -10,11 +10,13 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -126,7 +128,10 @@ fun PreparingSheet(onCancel: () -> Unit) {
 @Composable
 fun LookupFailedSheet(
     error: DownloadError,
+    detectedCount: Int,
     onRetry: () -> Unit,
+    onPickFile: () -> Unit,
+    onCopyDetails: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -136,11 +141,20 @@ fun LookupFailedSheet(
                 .fillMaxWidth()
                 .navigationBarsPadding()
                 .padding(horizontal = 24.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(text = error.displayMessage(), style = MaterialTheme.typography.bodyLarge)
+            Button(onClick = onRetry, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.action_try_again))
+            }
+            // The page's own video file often works when the site's page cannot be read.
+            if (detectedCount > 0) {
+                OutlinedButton(onClick = onPickFile, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.failure_pick_file, detectedCount))
+                }
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = onRetry) { Text(stringResource(R.string.action_try_again)) }
+                TextButton(onClick = onCopyDetails) { Text(stringResource(R.string.failure_copy_details)) }
                 TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
             }
         }

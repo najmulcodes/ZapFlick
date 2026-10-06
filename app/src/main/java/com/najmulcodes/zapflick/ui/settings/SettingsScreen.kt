@@ -1,5 +1,11 @@
 package com.najmulcodes.zapflick.ui.settings
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import com.najmulcodes.zapflick.domain.engine.FailureEntry
+import com.najmulcodes.zapflick.domain.engine.FailureReport
+import com.najmulcodes.zapflick.ui.util.appVersionName
+import com.najmulcodes.zapflick.ui.util.copyText
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -127,6 +133,7 @@ private fun SettingsContent(
 ) {
     val context = LocalContext.current
     val s = state.settings
+    val failures by viewModel.failures.collectAsStateWithLifecycle()
     var dialog by remember { mutableStateOf<SettingsDialog?>(null) }
     var confirm by remember { mutableStateOf<Confirm?>(null) }
     var showHowTo by remember { mutableStateOf(false) }
@@ -337,6 +344,14 @@ private fun SettingsContent(
             }
         }
 
+        item {
+            ValueRow(
+                title = stringResource(R.string.settings_problems_title),
+                value = stringResource(R.string.settings_problems_value, failures.size),
+                onClick = { dialog = SettingsDialog.Problems },
+            )
+        }
+
         // ---- Help
         item { Section(R.string.settings_section_help) }
         item { ValueRow(stringResource(R.string.how_to_download), null) { showHowTo = true } }
@@ -387,6 +402,12 @@ private fun SettingsContent(
             onSelect = viewModel::setChannel,
             onDismiss = { dialog = null },
         )
+        SettingsDialog.Problems -> ProblemsDialog(
+            entries = failures,
+            ytDlpVersion = state.ytDlpVersion,
+            onClear = viewModel::clearFailures,
+            onDismiss = { dialog = null },
+        )
         null -> Unit
     }
 
@@ -410,7 +431,7 @@ private fun SettingsContent(
     if (showHowTo) HowToSheet(onDismiss = { showHowTo = false })
 }
 
-private enum class SettingsDialog { Concurrent, Quality, Filename, Engine, Theme, Channel }
+private enum class SettingsDialog { Concurrent, Quality, Filename, Engine, Theme, Channel, Problems }
 
 private val QUALITY_KEYS: List<String> = listOf(
     AppSettings.QUALITY_ASK,
@@ -571,5 +592,46 @@ private fun <T> ChoiceDialog(
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) } },
+    )
+}
+
+@Composable
+private fun ProblemsDialog(
+    entries: List<FailureEntry>,
+    ytDlpVersion: String?,
+    onClear: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    val report = remember(entries, ytDlpVersion) {
+        FailureReport.build(entries, ytDlpVersion, appVersionName(context))
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_problems_title)) },
+        text = {
+            Text(
+                text = if (entries.isEmpty()) stringResource(R.string.settings_problems_empty) else report,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    copyText(context, "ZapFlick problems", report)
+                    Toast.makeText(context, R.string.failure_details_copied, Toast.LENGTH_SHORT).show()
+                },
+                enabled = entries.isNotEmpty(),
+            ) { Text(stringResource(R.string.settings_problems_copy)) }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = onClear, enabled = entries.isNotEmpty()) {
+                    Text(stringResource(R.string.settings_problems_clear))
+                }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
+            }
+        },
     )
 }

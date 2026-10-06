@@ -3,10 +3,6 @@ package com.najmulcodes.zapflick.ui.navigation
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Done
-import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
@@ -14,6 +10,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -21,7 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -55,12 +52,12 @@ object Routes {
     fun player(id: Long) = "player/$id"
 }
 
-private data class TopLevel(val route: String, val label: Int, val icon: ImageVector)
+private data class TopLevel(val route: String, val label: Int, @DrawableRes val icon: Int)
 
 private val TOP_LEVEL = listOf(
-    TopLevel(Routes.TAB, R.string.nav_tab, Icons.Outlined.Search),
-    TopLevel(Routes.PROGRESS, R.string.nav_progress, Icons.Outlined.PlayArrow),
-    TopLevel(Routes.FINISHED, R.string.nav_finished, Icons.Outlined.Done),
+    TopLevel(Routes.TAB, R.string.nav_tab, R.drawable.ic_nav_browse),
+    TopLevel(Routes.PROGRESS, R.string.nav_progress, R.drawable.ic_nav_downloads),
+    TopLevel(Routes.FINISHED, R.string.nav_finished, R.drawable.ic_nav_library),
 )
 
 /** Opens a bottom-bar destination, keeping its own back stack so returning to it restores where you were. */
@@ -86,6 +83,7 @@ fun AppNavHost(
     val current = backStack?.destination?.route
     val activeCount by barViewModel.activeCount.collectAsStateWithLifecycle()
     var fullscreenVideo by remember { mutableStateOf(false) }
+    var typingAddress by remember { mutableStateOf(false) }
 
     // A shared link is handled by the Tab screen, so bring it back to the front.
     LaunchedEffect(incomingShare) {
@@ -101,7 +99,7 @@ fun AppNavHost(
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            AnimatedVisibility(visible = !fullscreenVideo && TOP_LEVEL.any { it.route == current }) {
+            AnimatedVisibility(visible = !fullscreenVideo && !typingAddress && TOP_LEVEL.any { it.route == current }) {
                 NavigationBar {
                     TOP_LEVEL.forEach { destination ->
                         NavigationBarItem(
@@ -110,10 +108,10 @@ fun AppNavHost(
                             icon = {
                                 if (destination.route == Routes.PROGRESS && activeCount > 0) {
                                     BadgedBox(badge = { Badge { Text(activeCount.toString()) } }) {
-                                        Icon(destination.icon, contentDescription = null)
+                                        Icon(painterResource(destination.icon), contentDescription = null)
                                     }
                                 } else {
-                                    Icon(destination.icon, contentDescription = null)
+                                    Icon(painterResource(destination.icon), contentDescription = null)
                                 }
                             },
                             label = { Text(stringResource(destination.label)) },
@@ -135,6 +133,7 @@ fun AppNavHost(
                     onOpenSettings = { navController.navigate(Routes.SETTINGS) { launchSingleTop = true } },
                     onOpenProgress = { navController.switchTo(Routes.PROGRESS) },
                     onFullscreenChange = { fullscreenVideo = it },
+                    onTypingChange = { typingAddress = it },
                 )
             }
             composable(Routes.PROGRESS) {

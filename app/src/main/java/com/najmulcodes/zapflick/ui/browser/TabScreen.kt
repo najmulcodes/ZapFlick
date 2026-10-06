@@ -6,6 +6,7 @@ import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebView
@@ -44,6 +45,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -70,6 +72,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -81,12 +84,17 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.najmulcodes.zapflick.R
+import com.najmulcodes.zapflick.domain.browser.AddressDisplay
 import com.najmulcodes.zapflick.domain.browser.ErrorPageHtml
 import com.najmulcodes.zapflick.domain.browser.FavoriteSite
 import com.najmulcodes.zapflick.domain.browser.RequestSession
 import com.najmulcodes.zapflick.domain.browser.UserAgents
+import com.najmulcodes.zapflick.domain.engine.FailureReport
 import com.najmulcodes.zapflick.ui.components.HowToSheet
 import com.najmulcodes.zapflick.ui.components.QualitySheet
+import com.najmulcodes.zapflick.ui.util.appVersionName
+import com.najmulcodes.zapflick.ui.util.copyText
+import com.najmulcodes.zapflick.ui.util.shareText
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
@@ -103,6 +111,7 @@ fun TabScreen(
     onOpenSettings: () -> Unit,
     onOpenProgress: () -> Unit,
     onFullscreenChange: (Boolean) -> Unit,
+    onTypingChange: (Boolean) -> Unit,
     viewModel: BrowserViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -117,6 +126,8 @@ fun TabScreen(
     val blocked by viewModel.blockedCount.collectAsStateWithLifecycle()
     val desktop by viewModel.desktopSite.collectAsStateWithLifecycle()
     val autoPrepare by viewModel.autoPrepare.collectAsStateWithLifecycle()
+    val failures by viewModel.failures.collectAsStateWithLifecycle()
+    val ytDlpVersion by viewModel.ytDlpVersion.collectAsStateWithLifecycle()
     val activeTab = tabs.active
 
     var progress by remember { mutableIntStateOf(100) }
@@ -128,6 +139,8 @@ fun TabScreen(
     var showHowTo by remember { mutableStateOf(false) }
     var showAddFavorite by remember { mutableStateOf(false) }
     var favoriteMenu by remember { mutableStateOf<FavoriteSite?>(null) }
+    var refreshing by remember { mutableStateOf(false) }
+    var linkMenu by remember { mutableStateOf<LinkHit?>(null) }
     var customView by remember { mutableStateOf<View?>(null) }
     var customCallback by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
 
@@ -156,6 +169,7 @@ fun TabScreen(
                     customView = null
                     customCallback = null
                 },
+                onLongPress = { hit -> linkMenu = hit },
                 errorPage = { url ->
                     ErrorPageHtml.build(
                         title = context.getString(R.string.browser_error_title),
@@ -215,7 +229,6 @@ fun TabScreen(
         if (desktop == appliedDesktop) return@LaunchedEffect
         appliedDesktop = desktop
         webView.settings.userAgentString = if (desktop) desktopAgent else mobileAgent
-        webView.settings.useWideViewPort = desktop
         webView.settings.loadWithOverviewMode = desktop
         if (!activeTab.isNewTabPage) webView.reload()
     }
@@ -223,6 +236,10 @@ fun TabScreen(
     LaunchedEffect(activeTab.url, addressFocused) {
         if (!addressFocused) address = activeTab.url
     }
+    // While typing an address the bottom bar steps aside so the keyboard has the room.
+    LaunchedEffect(addressFocused) { onTypingChange(addressFocused) }
+    DisposableEffect(Unit) { onDispose { onTypingChange(false) } }
+    LaunchedEffect(progress) { if (progress >= 100) refreshing = false }
 
     fun loadAddress(url: String) {
         viewModel.navigatingTo(url)
@@ -330,6 +347,11 @@ fun TabScreen(
                     onAddToFavorites = { viewModel.addFavorite(activeTab.title, activeTab.url) },
                     onOpenProgress = onOpenProgress,
                     onCloseAllTabs = viewModel::closeAllTabs,
+                    onShare = { shareText(context, activeTab.url) },
+                    onCopyLink = {
+                        copyText(context, "link", activeTab.url)
+                        Toast.makeText(context, R.string.browser_link_copied, Toast.LENGTH_SHORT).show()
+                    },
                 )
             },
             floatingActionButton = {
@@ -347,7 +369,16 @@ fun TabScreen(
             },
             snackbarHost = { SnackbarHost(snackbarHostState) },
         ) { padding ->
-            Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+            PullToRefreshBox(
+                isRefreshing = refreshing,
+                onRefresh = {
+                    if (!activeTab.isNewTabPage) {
+                        refreshing = true
+                        webView.reload()
+                    }
+                },
+                modifier = Modifier.padding(padding).fillMaxSize(),
+            ) {
                 AndroidView(
                     factory = { webView },
                     modifier = Modifier.fillMaxSize(),
@@ -429,12 +460,55 @@ fun TabScreen(
         )
         is DownloadPanel.Failed -> LookupFailedSheet(
             error = current.error,
+            detectedCount = detected.size,
             onRetry = viewModel::retry,
+            onPickFile = viewModel::onDownloadButton,
+            onCopyDetails = {
+                val report = FailureReport.build(failures.take(3), ytDlpVersion, appVersionName(context))
+                copyText(context, "ZapFlick details", report)
+                Toast.makeText(context, R.string.failure_details_copied, Toast.LENGTH_SHORT).show()
+            },
             onDismiss = viewModel::onPanelDismiss,
         )
     }
 
     if (showHowTo) HowToSheet(onDismiss = { showHowTo = false })
+
+    linkMenu?.let { hit ->
+        AlertDialog(
+            onDismissRequest = { linkMenu = null },
+            title = {
+                Text(
+                    text = AddressDisplay.compact(hit.url).ifEmpty { hit.url },
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            },
+            text = {
+                Column {
+                    TextButton(onClick = { viewModel.newTab(hit.url); linkMenu = null }) {
+                        Text(stringResource(R.string.link_open_new_tab))
+                    }
+                    TextButton(onClick = { loadAddress(hit.url); linkMenu = null }) {
+                        Text(stringResource(R.string.link_open_here))
+                    }
+                    TextButton(
+                        onClick = {
+                            copyText(context, "link", hit.url)
+                            Toast.makeText(context, R.string.browser_link_copied, Toast.LENGTH_SHORT).show()
+                            linkMenu = null
+                        },
+                    ) { Text(stringResource(R.string.browser_copy_link)) }
+                    TextButton(onClick = { shareText(context, hit.url); linkMenu = null }) {
+                        Text(stringResource(R.string.browser_share_page))
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { linkMenu = null }) { Text(stringResource(R.string.action_close)) }
+            },
+        )
+    }
 
     if (showAddFavorite) {
         AddFavoriteDialog(
@@ -526,6 +600,8 @@ private fun BrowserTopBar(
     onAddToFavorites: () -> Unit,
     onOpenProgress: () -> Unit,
     onCloseAllTabs: () -> Unit,
+    onShare: () -> Unit,
+    onCopyLink: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
@@ -549,17 +625,12 @@ private fun BrowserTopBar(
                     }
                 }
                 if (showAddress) {
-                    OutlinedTextField(
-                        value = address,
-                        onValueChange = onAddressChange,
-                        modifier = Modifier
-                            .weight(1f)
-                            .onFocusChanged { onAddressFocusChange(it.isFocused) },
-                        singleLine = true,
-                        shape = RoundedCornerShape(28.dp),
-                        placeholder = { Text(stringResource(R.string.browser_address_hint)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
-                        keyboardActions = KeyboardActions(onGo = { onGo() }),
+                    AddressField(
+                        address = address,
+                        onAddressChange = onAddressChange,
+                        onFocusChange = onAddressFocusChange,
+                        onGo = onGo,
+                        modifier = Modifier.weight(1f),
                     )
                     IconButton(onClick = onReload) {
                         Icon(Icons.Outlined.Refresh, stringResource(R.string.browser_reload))
@@ -607,6 +678,14 @@ private fun BrowserTopBar(
                                 text = { Text(stringResource(R.string.browser_desktop_site)) },
                                 leadingIcon = { Checkbox(checked = desktopSite, onCheckedChange = null) },
                                 onClick = { menuOpen = false; onDesktopSite(!desktopSite) },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.browser_share_page)) },
+                                onClick = { menuOpen = false; onShare() },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.browser_copy_link)) },
+                                onClick = { menuOpen = false; onCopyLink() },
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.favorite_add_current)) },
